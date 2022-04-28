@@ -107,7 +107,8 @@ simdat <- tibble(
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .725))) %>% flatten_int()}) %>% flatten_int(),
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .85))) %>% flatten_int()}) %>% flatten_int(),
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .975))) %>% flatten_int()}) %>% flatten_int()
-  )
+  ),
+  ylog = log(correct)
 )
 rm(subj, cond, block, imgs)
 
@@ -120,17 +121,39 @@ saveRDS(sim_mod1, "models/simulation01.rds")
 
 sim_mod2 <- brm(data = simdat, 
                 correct ~ condition + (1|subj + image + block), 
-                family = bernoulli,
+                family = bernoulli, adapt_delta = .9,
                 save_pars = save_pars(all = TRUE))
 
 saveRDS(sim_mod2, "models/simulation02.rds") # 6 divergent transitions after warmup, tho :(
 
+## further analysis
+sim_mod1 <- readRDS("models/simulation01.rds")
+sim_mod2 <- readRDS("models/simulation02.rds")
 
-loo1 <- loo::loo(sim_mod1, save_pars(all = TRUE))
-loo2 <- loo::loo(sim_mod2, save_pars(all = TRUE))
+loo1 <- loo::loo(sim_mod1, save_psis = TRUE)
+loo2 <- loo::loo(sim_mod2, save_psis = TRUE)
+
+
+yrep1 <- posterior_predict(sim_mod1)
+yrep2 <- posterior_predict(sim_mod2)
+
+ppc_loo_pit_overlay(simdat$correct, yrep1, lw = weights(loo1$psis_object))
+ppc_loo_pit_overlay(simdat$correct, yrep2, lw = weights(loo2$psis_object))
+
 
 loo::loo_compare(loo1, loo2)
 
+
+# altmods
+sim_mod11 <- brm(data = simdat, 
+                 ylog ~ condition * block + (1|subj + image), 
+                 family = bernoulli,
+                 save_pars = save_pars(all = TRUE))
+
+sim_mod22 <- brm(data = simdat, 
+                 ylog ~ condition + (1|subj + image + block), 
+                 family = bernoulli, # adapt_delta = .9,
+                 save_pars = save_pars(all = TRUE))
 
 
 ## trial responses for 1 subject

@@ -95,36 +95,46 @@ alt_model_training <- brm(data = train,
 subj <- paste0("S0", str_pad(1:100, 2, pad = "0")) %>% as_factor()
 cond <- rep(LETTERS[1:4], each = 25) %>% as_factor()
 block <- as_factor(1:12)
-imgs <- paste0("img", 1:8) # %>% as_factor()
+imgs <- paste0("img", 1:8)
 
 simdat <- tibble(
   subj = rep(subj, each = 96),
   condition = rep(cond, each = 96),
   block = rep(block, times = 800),
-  imgage = rep(lapply(1:12, sample, x = imgs, size = 8) %>% flatten_chr() %>% factor(levels = imgs), 100),
+  image = rep(lapply(1:12, sample, x = imgs, size = 8) %>% flatten_chr() %>% factor(levels = imgs), 100),
   correct = c(
-    rbernoulli(2400, .3),
-    rbernoulli(2400, .5),
-    rbernoulli(2400, .5),
-    rbernoulli(2400, .7))
+    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .6))) %>% flatten_int()}) %>% flatten_int(),
+    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .725))) %>% flatten_int()}) %>% flatten_int(),
+    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .85))) %>% flatten_int()}) %>% flatten_int(),
+    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .975))) %>% flatten_int()}) %>% flatten_int()
   )
+)
+rm(subj, cond, block, imgs)
 
 sim_mod1 <- brm(data = simdat, 
-                correct ~ condition * block + (1|subj + imgage), 
+                correct ~ condition * block + (1|subj + image), 
                 family = bernoulli,
                 save_pars = save_pars(all = TRUE))
 
 saveRDS(sim_mod1, "models/simulation01.rds")
 
 sim_mod2 <- brm(data = simdat, 
-                correct ~ condition + (1|subj + imgage + block), 
+                correct ~ condition + (1|subj + image + block), 
                 family = bernoulli,
                 save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod2, "models/simulation02.rds")
+saveRDS(sim_mod2, "models/simulation02.rds") # 6 divergent transitions after warmup, tho :(
 
 
 loo1 <- loo::loo(sim_mod1, save_pars(all = TRUE))
 loo2 <- loo::loo(sim_mod2, save_pars(all = TRUE))
 
 loo::loo_compare(loo1, loo2)
+
+
+
+## trial responses for 1 subject
+# 12x8 trials
+# p -> steigt bis min(.x/12, 1) an und simuliert steigende acc pro block
+# wenn y in min(.x/12, y) <1 gesetzt wird, sinkt sowohl max_acc als auch die rate, in der acc ansteigt
+map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, 1))) %>% flatten_dbl()

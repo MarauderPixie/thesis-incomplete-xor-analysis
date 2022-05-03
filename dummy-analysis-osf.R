@@ -1,6 +1,8 @@
 library(tidyverse)
 library(brms)
 
+theme_set(hrbrthemes::theme_ipsum_tw())
+
 ### condition-assignment:
 # 1: no rll, no ordering
 # 2: no rr, simple rule first
@@ -92,16 +94,16 @@ alt_model_training <- brm(data = train,
                           family = bernoulli)
 
 # "simulate" some data
-subj <- paste0("S0", str_pad(1:100, 2, pad = "0")) %>% as_factor()
-cond <- rep(LETTERS[1:4], each = 25) %>% as_factor()
+subj  <- paste0("S0", str_pad(1:100, 2, pad = "0")) %>% as_factor()
+cond  <- rep(LETTERS[1:4], each = 25) %>% as_factor()
 block <- as_factor(1:12)
-imgs <- paste0("img", 1:8)
+imgs  <- paste0("img", 1:8)
 
 simdat <- tibble(
   subj = rep(subj, each = 96),
   condition = rep(cond, each = 96),
-  block = rep(block, times = 800),
-  image = rep(lapply(1:12, sample, x = imgs, size = 8) %>% flatten_chr() %>% factor(levels = imgs), 100),
+  block = rep(rep(block, each = 8), times = 100),
+  image = rep(map(1:12, function(i){sample(imgs, 8)}) %>% flatten_chr() %>% factor(levels = imgs), 100),
   correct = c(
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .6))) %>% flatten_int()}) %>% flatten_int(),
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .725))) %>% flatten_int()}) %>% flatten_int(),
@@ -144,16 +146,10 @@ ppc_loo_pit_overlay(simdat$correct, yrep2, lw = weights(loo2$psis_object))
 loo::loo_compare(loo1, loo2)
 
 
-# altmods
-sim_mod11 <- brm(data = simdat, 
-                 ylog ~ condition * block + (1|subj + image), 
-                 family = bernoulli,
-                 save_pars = save_pars(all = TRUE))
+# altmods & playing around
+draws1 <- as_draws_df(sim_mod1)
+draws2 <- as_draws_df(sim_mod2)
 
-sim_mod22 <- brm(data = simdat, 
-                 ylog ~ condition + (1|subj + image + block), 
-                 family = bernoulli, # adapt_delta = .9,
-                 save_pars = save_pars(all = TRUE))
 
 
 ## trial responses for 1 subject

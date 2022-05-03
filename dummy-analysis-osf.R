@@ -116,17 +116,17 @@ rm(subj, cond, block, imgs)
 
 sim_mod1 <- brm(data = simdat, 
                 correct ~ condition * block + (1|subj + image), 
-                family = bernoulli,
+                family = bernoulli, iter = 4000, # 2000 -> low ESS, 4k seem fine
                 save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod1, "models/simulation01.rds")
+saveRDS(sim_mod1, "models/simulation01.rds") 
 
 sim_mod2 <- brm(data = simdat, 
                 correct ~ condition + (1|subj + image + block), 
-                family = bernoulli, adapt_delta = .9,
+                family = bernoulli, iter = 4000,
                 save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod2, "models/simulation02.rds") # 6 divergent transitions after warmup, tho :(
+saveRDS(sim_mod2, "models/simulation02.rds")
 
 ## further analysis
 sim_mod1 <- readRDS("models/simulation01.rds")
@@ -147,9 +147,21 @@ loo::loo_compare(loo1, loo2)
 
 
 # altmods & playing around
-draws1 <- as_draws_df(sim_mod1)
-draws2 <- as_draws_df(sim_mod2)
+aggr <- simdat %>% 
+  group_by(condition, subj, block) %>% 
+  summarise(
+    correct = sum(correct),
+    total   = n(),
+    p_corr  = correct / total
+  ) %>% 
+  ungroup()
 
+sim_mod_alt1 <- brm(data = aggr, 
+                    correct|trials(total) ~ condition * block + (1|subj), 
+                    family = binomial, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                    save_pars = save_pars(all = TRUE))
+
+saveRDS(sim_mod_alt1, "models/simulation03.rds") 
 
 
 ## trial responses for 1 subject

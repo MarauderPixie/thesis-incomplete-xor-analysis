@@ -1,7 +1,7 @@
 library(tidyverse)
 library(brms)
 
-theme_set(hrbrthemes::theme_ipsum_tw())
+theme_set(hrbrthemes::theme_ipsum_ps())
 
 #### condition-assignment: ----
 # A: no rll, no ordering
@@ -174,21 +174,24 @@ saveRDS(srf_mod, "models/simulation_srf.rds")
 
 
 ## further analysis
-sim_mod1 <- readRDS("models/simulation01.rds")
-sim_mod2 <- readRDS("models/simulation02.rds")
+full_mod <- readRDS("models/simulation_full.rds")
+rll_mod  <- readRDS("models/simulation_rll.rds")
+srf_mod  <- readRDS("models/simulation_srf.rds")
 
-loo1 <- loo::loo(sim_mod1, save_psis = TRUE)
-loo2 <- loo::loo(sim_mod2, save_psis = TRUE)
+loo1 <- loo::loo(rll_mod, save_psis = TRUE)
+loo2 <- loo::loo(srf_mod, save_psis = TRUE)
 
 
-yrep1 <- posterior_predict(sim_mod1)
-yrep2 <- posterior_predict(sim_mod2)
+yrep1 <- posterior_predict(rll_mod)
+yrep2 <- posterior_predict(srf_mod)
 
-ppc_loo_pit_overlay(simdat$correct, yrep1, lw = weights(loo1$psis_object))
-ppc_loo_pit_overlay(simdat$correct, yrep2, lw = weights(loo2$psis_object))
+bayesplot::ppc_loo_pit_overlay(rll_dat$correct, yrep1, lw = weights(loo1$psis_object))
+bayesplot::ppc_loo_pit_overlay(srf_dat$correct, yrep2, lw = weights(loo2$psis_object))
 
 
 loo::loo_compare(loo1, loo2)
+
+bayes_factor(rll_mod, srf_mod)
 
 
 # altmods & playing around
@@ -201,16 +204,38 @@ aggr <- simdat %>%
   ) %>% 
   ungroup()
 
-sim_mod_alt1 <- brm(data = aggr, 
-                    correct|trials(total) ~ condition * block + (1|subj), 
-                    family = binomial, iter = 4000, # 2000 -> low ESS, 4k seem fine
-                    save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod_alt1, "models/simulation03.rds") 
+### different RE structures
+# only allow for variation in subjects
+rll_mod2 <- brm(data = rll_dat,  
+                correct ~ condition * block + (1 | subj), 
+                family = bernoulli, 
+                save_pars = save_pars(all = TRUE))
+
+# assume diff subjects react moreor less to condition; || means 'no correlation bw REs'
+# that is:
+# intercept and slope for `condition` varies with values for `subj`
+rll_mod3 <- brm(data = rll_dat,  
+                correct ~ condition * block + (1 + condition || subj), 
+                family = bernoulli, 
+                save_pars = save_pars(all = TRUE))
+
+# maybeb slope for 'images' varies with 'subj'
+rll_mod4 <- brm(data = rll_dat,  
+                correct ~ condition * block + (1 + image || subj), 
+                family = bernoulli, 
+                save_pars = save_pars(all = TRUE))
+
+# yet another assumption might be that the trend over blocks is allowed to vary by subject
+# and/or by block AND condition, and/or by block AND condition AND image...
+rll_mod5 <- brm(data = rll_dat,  
+                correct ~ condition * block + (1 + block || subj), 
+                family = bernoulli, 
+                save_pars = save_pars(all = TRUE))
 
 
-## trial responses for 1 subject
-# 12x8 trials
-# p -> steigt bis min(.x/12, 1) an und simuliert steigende acc pro block
-# wenn y in min(.x/12, y) <1 gesetzt wird, sinkt sowohl max_acc als auch die rate, in der acc ansteigt
-map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, 1))) %>% flatten_dbl()
+loo(rll_mod, rll_mod2, rll_mod3)
+
+rll_loo1 <- loo(rll_mod)
+rll_loo2 <- loo(rll_mod2)
+rll_loo3 <- loo(rll_mod3)

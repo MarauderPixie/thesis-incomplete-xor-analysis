@@ -3,13 +3,21 @@ library(brms)
 
 theme_set(hrbrthemes::theme_ipsum_tw())
 
-### condition-assignment:
-# 1: no rll, no ordering
-# 2: no rr, simple rule first
-# 3: rll, no ordering
-# 4: rll, srf
+#### condition-assignment: ----
+# A: no rll, no ordering
+# B: no rr, simple rule first
+# C: rll, no ordering
+# D: rll, srf
+
+### notes on hypotheses:
+# We're interested in comparisons of
+# A <-> B
+# A <-> C
+# D <-> A, B, C
+# amirite?
 
 
+#### test phase data ----
 # the data used here was collected in several developmental stages of the experiment;
 # final results will look very similar in structure such that this example should
 # completely suffice to serve as an example
@@ -93,17 +101,23 @@ alt_model_training <- brm(data = train,
                           score ~ condition * block + (1|subj + image), 
                           family = bernoulli)
 
-# "simulate" some data
+#### "simulate" some data ----
 subj  <- paste0("S0", str_pad(1:100, 2, pad = "0")) %>% as_factor()
 cond  <- rep(LETTERS[1:4], each = 25) %>% as_factor()
 block <- as_factor(1:12)
-imgs  <- paste0("img", 1:8)
+imgs1 <- rep(paste0("img", 1:4), 2)
+imgs2 <- c(paste0("img", 1:6), imgs1[1:2])
 
 simdat <- tibble(
   subj = rep(subj, each = 96),
   condition = rep(cond, each = 96),
   block = rep(rep(block, each = 8), times = 100),
-  image = rep(map(1:12, function(i){sample(imgs, 8)}) %>% flatten_chr() %>% factor(levels = imgs), 100),
+  image = c(
+    rep(map(1:12, function(i){sample(imgs2, 8)}) %>% flatten_chr(), 25),
+    rep(map(1:12, function(i){sample(imgs1, 8)}) %>% flatten_chr(), 25),
+    rep(map(1:12, function(i){sample(imgs2, 8)}) %>% flatten_chr(), 25),
+    rep(map(1:12, function(i){sample(imgs1, 8)}) %>% flatten_chr(), 25)
+    ) %>% factor(),
   correct = c(
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .6))) %>% flatten_int()}) %>% flatten_int(),
     lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .725))) %>% flatten_int()}) %>% flatten_int(),
@@ -112,21 +126,52 @@ simdat <- tibble(
   ),
   ylog = log(correct)
 )
-rm(subj, cond, block, imgs)
+rm(subj, cond, block, imgs1, imgs2)
 
-sim_mod1 <- brm(data = simdat, 
+
+#### model the simulated data ----
+# What are my random effects?
+# images occur repeatedly, as well as subjects
+# every subject goes through every block once tho
+# same for every condition
+#
+# I'm interested in the differences between blocks and conditions
+# that is: not only are blocks 1 & 2 'training blocks' in any case
+# they also differ in composition
+# now...
+# SM suggests comparing two models, one of conditions 1&3 and one of 2&4, amirite?
+full_dat <- simdat %>% filter(as.numeric(block) > 2)
+rll_dat  <- full_dat %>% filter(condition %in% c("A", "C"))
+srf_dat  <- full_dat %>% filter(condition %in% c("A", "B"))
+
+
+full_mod <- brm(data = full_dat,  
                 correct ~ condition * block + (1|subj + image), 
                 family = bernoulli, iter = 4000, # 2000 -> low ESS, 4k seem fine
                 save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod1, "models/simulation01.rds") 
+### old fiddling around with RE structure...
+# sim_mod2 <- brm(data = simdat, 
+#                 correct ~ condition + (1|subj + image + block), 
+#                 family = bernoulli, iter = 4000,
+#                 save_pars = save_pars(all = TRUE))
+# 
+# saveRDS(sim_mod2, "models/simulation02.rds")
 
-sim_mod2 <- brm(data = simdat, 
-                correct ~ condition + (1|subj + image + block), 
-                family = bernoulli, iter = 4000,
-                save_pars = save_pars(all = TRUE))
+rll_mod <- brm(data = rll_dat,  
+               correct ~ condition * block + (1|subj + image), 
+               family = bernoulli, 
+               save_pars = save_pars(all = TRUE))
 
-saveRDS(sim_mod2, "models/simulation02.rds")
+srf_mod <- brm(data = srf_dat,  
+               correct ~ condition * block + (1|subj + image), 
+               family = bernoulli, control = list( adapt_delta = .9),
+               save_pars = save_pars(all = TRUE)) # 1 divergent transition after warmup /o\
+
+saveRDS(full_mod, "models/simulation_full.rds")
+saveRDS(rll_mod, "models/simulation_rll.rds")
+saveRDS(srf_mod, "models/simulation_srf.rds")
+
 
 ## further analysis
 sim_mod1 <- readRDS("models/simulation01.rds")

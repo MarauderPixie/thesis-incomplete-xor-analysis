@@ -233,6 +233,9 @@ rll_mod5 <- brm(data = rll_dat,
                 family = bernoulli, 
                 save_pars = save_pars(all = TRUE))
 
+# TODO: it's probably a good idea to compare bern to binom models, 
+# or models where 'block' is a numeric predictor...?
+
 
 loo(rll_mod, rll_mod2, rll_mod3)
 

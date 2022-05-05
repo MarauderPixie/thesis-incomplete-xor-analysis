@@ -194,16 +194,7 @@ loo::loo_compare(loo1, loo2)
 bayes_factor(rll_mod, srf_mod)
 
 
-# altmods & playing around
-aggr <- simdat %>% 
-  group_by(condition, subj, block) %>% 
-  summarise(
-    correct = sum(correct),
-    total   = n(),
-    p_corr  = correct / total
-  ) %>% 
-  ungroup()
-
+# altmods & playing around with... ----
 
 ### different RE structures
 # only allow for variation in subjects
@@ -233,12 +224,43 @@ rll_mod5 <- brm(data = rll_dat,
                 family = bernoulli, 
                 save_pars = save_pars(all = TRUE))
 
+saveRDS(rll_mod5, "models/rll_mod5.rds")
+
 # TODO: it's probably a good idea to compare bern to binom models, 
 # or models where 'block' is a numeric predictor...?
+#
+# also: so far, only model 5 seems to be any (reasonably) better
+rll_mod6 <- brm(data = rll_dat,  
+                correct ~ condition * block + (1 + block + image || subj), 
+                family = bernoulli, 
+                save_pars = save_pars(all = TRUE))
+
+rll_mod7 <- brm(data = mutate(rll_dat, block = as.numeric(block)),
+                correct ~ condition * block + (1 + block || subj), 
+                family = bernoulli, cores = 2,
+                save_pars = save_pars(all = TRUE))
+
+# all_mods <- loo(rll_mod, rll_mod2, rll_mod3, rll_mod4, rll_mod5)
 
 
-loo(rll_mod, rll_mod2, rll_mod3)
+#### let's try binomial models? ----
+aggr <- full_dat %>% 
+  group_by(condition, subj, block) %>% 
+  summarise(
+    correct = sum(correct),
+    total   = n(),
+    perc    = correct / total
+  ) %>% 
+  ungroup()
 
-rll_loo1 <- loo(rll_mod)
-rll_loo2 <- loo(rll_mod2)
-rll_loo3 <- loo(rll_mod3)
+rll_aggr <- aggr %>% filter(condition %in% c("A", "C"))
+rll_mod9 <- brm(data = rll_aggr,  
+                correct|trials(total) ~ condition * block + (1 + block || subj), 
+                family = binomial, cores = 4,
+                save_pars = save_pars(all = TRUE))
+
+srf_aggr <- aggr %>% filter(condition %in% c("A", "B"))
+srf_mod9 <- brm(data = srf_aggr,  
+                correct|trials(total) ~ condition * block + (1 + block || subj), 
+                family = binomial, cores = 4,
+                save_pars = save_pars(all = TRUE))

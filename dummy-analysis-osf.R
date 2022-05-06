@@ -107,26 +107,39 @@ cond  <- rep(LETTERS[1:4], each = 25) %>% as_factor()
 block <- as_factor(1:12)
 imgs1 <- rep(paste0("img", 1:4), 2)
 imgs2 <- c(paste0("img", 1:6), imgs1[1:2])
+# gimgs <- paste0("img", str_pad(1:49, 2, pad = "0"))
+gen_state <- c(rep("critical", 9), rep("midlane", 13), rep("regular", 27))
 
 simdat <- tibble(
   subj = rep(subj, each = 96),
   condition = rep(cond, each = 96),
-  block = rep(rep(block, each = 8), times = 100),
+  block = rep(block, each = 8, times = 100),
   image = c(
-    rep(map(1:12, function(i){sample(imgs2, 8)}) %>% flatten_chr(), 25),
-    rep(map(1:12, function(i){sample(imgs1, 8)}) %>% flatten_chr(), 25),
-    rep(map(1:12, function(i){sample(imgs2, 8)}) %>% flatten_chr(), 25),
-    rep(map(1:12, function(i){sample(imgs1, 8)}) %>% flatten_chr(), 25)
+    replicate(25*12, sample(imgs2, 8)) %>% as.vector(),
+    replicate(25*12, sample(imgs1, 8)) %>% as.vector(),
+    replicate(25*12, sample(imgs2, 8)) %>% as.vector(),
+    replicate(25*12, sample(imgs1, 8)) %>% as.vector()
     ) %>% factor(),
   correct = c(
-    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .6))) %>% flatten_int()}) %>% flatten_int(),
-    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .725))) %>% flatten_int()}) %>% flatten_int(),
-    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .85))) %>% flatten_int()}) %>% flatten_int(),
-    lapply(1:25, function(i){map(seq(12), ~rbernoulli(n = 8, p = min(.x/12, .975))) %>% flatten_int()}) %>% flatten_int()
-  ),
-  ylog = log(correct)
+    map(rep(pmin(1:12/12, .6), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(rep(pmin(1:12/12, .725), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(rep(pmin(1:12/12, .85), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(rep(pmin(1:12/12, .975), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int()
+  )
 )
-rm(subj, cond, block, imgs1, imgs2)
+
+gensim <- tibble(
+  subj = rep(subj, each = 49),
+  condition = rep(cond, each = 49),
+  image = replicate(100, sample(gen_state, 49)) %>% as.vector(),
+  response = c( # taking it easy...
+    replicate(25, rbernoulli(49, .3)) %>% as.integer(),
+    replicate(25, rbernoulli(49, .5)) %>% as.integer(),
+    replicate(25, rbernoulli(49, .7)) %>% as.integer(),
+    replicate(25, rbernoulli(49, .9)) %>% as.integer()
+  )
+)
+rm(subj, cond, block, imgs1, imgs2, gen_state)
 
 
 #### model the simulated data ----
@@ -166,7 +179,7 @@ rll_mod <- brm(data = rll_dat,
 srf_mod <- brm(data = srf_dat,  
                correct ~ condition * block + (1|subj + image), 
                family = bernoulli, control = list( adapt_delta = .9),
-               save_pars = save_pars(all = TRUE)) # 1 divergent transition after warmup /o\
+               save_pars = save_pars(all = TRUE))
 
 saveRDS(full_mod, "models/simulation_full.rds")
 saveRDS(rll_mod, "models/simulation_rll.rds")
@@ -264,3 +277,62 @@ srf_mod9 <- brm(data = srf_aggr,
                 correct|trials(total) ~ condition * block + (1 + block || subj), 
                 family = binomial, cores = 4,
                 save_pars = save_pars(all = TRUE))
+
+
+#### models for data of generalization phase ----
+crits <- gensim %>% filter(image == "critical")
+
+gen_mod1 <- brm(data = crits,  
+                response ~ condition + (1 | subj), 
+                family = bernoulli, cores = 4,
+                control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+gen_mod2 <- brm(data = filter(crits, condition %in% c("A", "C")),
+                response ~ condition + (1 | subj), 
+                family = bernoulli, cores = 4,
+                # control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+gen_mod3 <- brm(data = filter(crits, condition %in% c("A", "B")),
+                response ~ condition + (1 | subj), 
+                family = bernoulli, cores = 4,
+                # control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+craggr <- crits %>% 
+  group_by(condition, subj) %>% 
+  summarise(
+    extra = sum(response),
+    total = n(),
+    p     = extra / total
+  ) %>% ungroup()
+
+gen_mod4 <- brm(data = craggr,  
+                extra|trials(total) ~ condition + (1 | subj), 
+                family = binomial, cores = 4,
+                control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+gen_mod5 <- brm(data = filter(craggr, condition %in% c("A", "C")),
+                extra|trials(total) ~ condition + (1 | subj), 
+                family = binomial, cores = 4,
+                # control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+gen_mod6 <- brm(data = filter(craggr, condition %in% c("A", "B")),
+                extra|trials(total) ~ condition + (1 | subj), 
+                family = binomial, cores = 4,
+                # control = list( adapt_delta = .85),
+                save_pars = save_pars(all = TRUE))
+
+
+loo1 <- loo(gen_mod1, save_psis = TRUE)
+loo4 <- loo(gen_mod4, save_psis = TRUE)
+
+yrep1 <- posterior_predict(gen_mod1)
+
+library(bayesplot)
+ppc_loo_pit_overlay(y = crits$response, 
+                    yrep = yrep1,
+                    lw = weights(loo1$psis_object))

@@ -1,9 +1,9 @@
-To investigate the research questions above, an experiment similar to Conaway & Kurtz (2016) will be conducted. The basic proceeding is: participants will receive instructions for the task at hand. 
+To investigate the research questions above, an experiment similar to Conaway & Kurtz (2016) will be conducted. The basic proceeding is: participants will receive instructions for the task at hand, undergo a training phase of an incomplete XOR task with 12 blocks of 8 trials each (96 trials in total), receive yet another instructional prompt and then complete a generalization phase with 49 trials, of which 9 are the "missing" ones from training phase to constitute a full-XOR set of stimuli. 
 
 There will be a total of 4 groups:
-1. A control group A that will receive to experimental treatment; that is,no rule-related language in the instructions as well as the full set of training stimuli from the get-go.
-2. A group B that will receive no rule-related language, but will only encounter a reduced set of stimuli, such that they only have to learn very simple rule (a type I solution in SHJ-terms) before encountering the full set (resulting in an incomplete XOR solution)
-3. A group C that will receive rule-related language, but no 'simple rule first'.
+1. A control group A that will receive to experimental treatment; that is, no rule-related language in the instructions as well as the full set of training stimuli from the get-go.
+2. A group B that will receive rule-related language, but no 'simple rule first' (see next point).
+3. A group C that will receive no rule-related language, but will encounter a reduced set of stimuli before the full set, such that they only have to learn a very simple rule (a type I solution in SHJ-terms) before encountering the full set (resulting in an incomplete XOR solution)
 4. A group D that will receive rule-related language in the instructions as well as a simple rule first.
 
 With that, we can establish these hypotheses:

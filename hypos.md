@@ -7,15 +7,26 @@ There will be a total of 4 groups:
 4. A group D that will receive rule-related language in the instructions as well as a simple rule first.
 
 With that, we can establish these hypotheses:
-H1.1: There will be a main effect of the simple rule first condition on the overall accuracy during training (Mean_acc of Group B > Group A)
-H1.2: There will be a main effect of the simple rule first condition on the number of extrapolated responses on the nine critcal items during the generalization phase (N_ext of Group B > Group A)
-H2.1: There will be a main effect of rule related language on the overall accuracy during training (Mean_acc of Group C > Group A)
-H2.2: There will be a main effect of rule related language on the number of extrapolated responses on the nine critcal items during the generalization phase (N_ext of Group C > Group A)
 
-The relation betwen the effect of rule ordering and the effect of rule related language is unclear as of yet; whether the one is larger than the other, if they are additive or interacting in any way at all. An additive effect seems most likely as both experimental modulations aim to aid the subjects in categorization / rule learning in a different way. Therefore we propose the following hypotheses regarding the fit of our models:
+**H1.1:** There will be a main effect of rule related language on the overall accuracy during training ($\mu_{Acc, B} > \mu_{Acc, A}$)  
+**H1.2:** There will be a main effect of rule related language on the number of extrapolated responses on the nine critcal items during the generalization phase ($N_{ext, B} > N_{ext,A}$)
 
-H3: 
+**H2.1:** There will be a main effect of the simple rule first condition on the overall accuracy during training ($\mu_{Acc, C} > \mu_{Acc, A}$)  
+**H2.2:** There will be a main effect of the simple rule first condition on the number of extrapolated responses on the nine critcal items during the generalization phase (N_ext of Group B > Group A)
 
+The relation between the effect of rule ordering and the effect of rule related language is unclear as of yet; whether the one is larger than the other, if they are additive or whether they're interacting in any way at all. Therefore the third set of hypotheses is undirected:
+
+**H3.1:** The combination of rule related language and rule ordering will result in a difference of accuracy to groups receiving only one or neither of those treatments $$\begin{array}{r}
+    \mu_{Acc, D} \neq \mu_{Acc, A} \\ 
+    \mu_{Acc, D} \neq \mu_{Acc, B} \\ 
+    \mu_{Acc, D} \neq \mu_{Acc, C} 
+  \end{array}$$
+
+$\mu_{Acc, D} \neq \mu_{Acc, A}, \mu_{Acc, B}, \mu_{Acc, C}$
 
 H3: There will be a difference in the effects of rule related language and rule ordering (Mod_AB != Mod_AC)
 H4: Both effects in question will yield 
+
+
+
+An additive effect seems most likely as both experimental modulations aim to aid the subjects in categorization / rule learning in a different way. Therefore we propose the following hypotheses regarding the fit of our models:

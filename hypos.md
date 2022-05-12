@@ -19,11 +19,9 @@ The relation between the effect of rule ordering and the effect of rule related 
 **H3.1:** The combination of rule related language and rule ordering will result in a difference of accuracy to groups receiving only one or neither of those treatments ($\mu_{Acc, D} \neq \mu_{Acc, A}, \mu_{Acc, B}, \mu_{Acc, C}$)  
 **H3.1:** The combination of rule related language and rule ordering will result in a difference to the number of extrapolated responses during the generalization phase to groups receiving only one or neither of those treatments ($k_D \neq k_A, k_B, k_C$)
 
-Since the experimental procedure occurs in sequential blocks of trials, we can also hypothesize about the speed in which high accuracies will be achieved between the different experimental conditions. It seems likely that in later stages (or blocks) of the training phase, participants in any condition will have "figured it out", whereas in earlier stages, Groups B-D should have a learning advantage of some sort over Group A. Thus:
+Since the experimental procedure occurs in sequential blocks of randomized trials, we can also hypothesize about the speed in which high accuracies will be achieved between the different experimental conditions. It seems likely that in later stages (or blocks) of the training phase, participants in any condition will have "figured it out", whereas in earlier stages, Groups B-D should have a learning advantage of some sort over Group A. Thus:
 
-**H4:** There will be an interaction regarding the accuracy between experimental conditions at different stages during the training phase ()
-
-$\mu_{$
+**H4:** There will be an interaction regarding the accuracy between experimental conditions at different stages during the training phase ($\mu_{A_{1-12}} \neq \mu_{B_{1-12}} \neq \mu_{C_{1-12}} \neq \mu_{D_{1-12}}$)
 
 
 <!--- An additive effect seems most likely as both experimental modulations aim to aid the subjects in categorization / rule learning in a different way. Therefore we propose the following hypotheses regarding the fit of our models:

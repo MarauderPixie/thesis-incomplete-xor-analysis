@@ -26,3 +26,13 @@ fuller_mod <- brm(data = mutate(simdat, block = as.numeric(block)),
                   correct ~ condition * block + (1 + image|subj), 
                   family = bernoulli, iter = 4000, # 2000 -> low ESS, 4k seem fine
                   save_pars = save_pars(all = TRUE))
+
+
+p_by_subj <- simdat %>%
+  group_by(condition, block, subj) %>%
+  summarise(
+    k = sum(correct),
+    n = n(),
+    p = k/n
+  ) %>% 
+  ungroup()

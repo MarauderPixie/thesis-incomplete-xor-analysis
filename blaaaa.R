@@ -36,3 +36,8 @@ p_by_subj <- simdat %>%
     p = k/n
   ) %>% 
   ungroup()
+
+## sth sth lme4
+library(lme4)
+lme4 <- glmer(p ~ condition + block + (block|subj), family = binomial(), data = p_by_subj)
+brms <- brm(p ~ condition + block + (block|subj), family = binomial(), data = p_by_subj)

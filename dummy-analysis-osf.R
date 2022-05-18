@@ -141,6 +141,9 @@ gensim <- tibble(
 )
 rm(subj, cond, block, imgs1, imgs2, gen_state)
 
+saveRDS(simdat, "data-raw/simulated_training.rds")
+saveRDS(gensim, "data-raw/simulated_generalization.rds")
+
 
 #### model the simulated data ----
 # What are my random effects?

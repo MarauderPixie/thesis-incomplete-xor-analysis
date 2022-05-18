@@ -28,7 +28,7 @@ fuller_mod <- brm(data = mutate(simdat, block = as.numeric(block)),
                   save_pars = save_pars(all = TRUE))
 
 
-p_by_subj <- simdat %>%
+p_subj_t <- simt %>%
   group_by(condition, block, subj) %>%
   summarise(
     k = sum(correct),
@@ -41,3 +41,24 @@ p_by_subj <- simdat %>%
 library(lme4)
 lme4 <- glmer(p ~ condition + block + (block|subj), family = binomial(), data = p_by_subj)
 brms <- brm(p ~ condition + block + (block|subj), family = binomial(), data = p_by_subj)
+
+
+## sth sth correlations
+p_subj_g <- simg %>%
+  group_by(condition, subj) %>%
+  summarise(
+    k = sum(response),
+    n = n(),
+    p = k/n
+  ) %>% 
+  ungroup()
+
+
+
+
+
+
+
+#### important notes I guess!
+#
+# wenn ich 'k|n ~ bla, family = binomial' rechne, habe ich genai 

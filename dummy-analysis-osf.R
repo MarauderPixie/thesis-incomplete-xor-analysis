@@ -339,3 +339,31 @@ library(bayesplot)
 ppc_loo_pit_overlay(y = crits$response, 
                     yrep = yrep1,
                     lw = weights(loo1$psis_object))
+
+
+
+
+
+
+## as.factor(block) vs. as.numeric(block)
+full_dat <- simdat %>% filter(as.numeric(block) > 2) %>% 
+  group_by(subj, condition, block) %>% 
+  summarise(
+    k = sum(correct),
+    n = n(),
+    p = k / n
+  ) %>% 
+  ungroup()
+
+
+mod_num <- brm(data = mutate(full_dat, block = as.numeric(block)),
+               k|trials(n) ~ condition + block + (block | subj), 
+               family = binomial, cores = 4,
+               # control = list( adapt_delta = .85),
+               save_pars = save_pars(all = TRUE))
+
+mod_fct <- brm(data = full_dat,
+               k|trials(n) ~ condition + block + (block | subj), 
+               family = binomial, cores = 4,
+               # control = list( adapt_delta = .85),
+               save_pars = save_pars(all = TRUE))

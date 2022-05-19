@@ -121,11 +121,14 @@ simdat <- tibble(
     replicate(25*12, sample(imgs1, 8)) %>% as.vector()
     ) %>% factor(),
   correct = c(
-    map(rep(pmin(1:12/12, .6), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(rep(pmin(1:12/12, .725), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(rep(pmin(1:12/12, .85), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(rep(pmin(1:12/12, .975), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int()
-  )
+    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .6), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .7), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .8), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .9), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int()
+  ) # ,
+  # rt = c(
+  #   map(rnorm(25, 220, 20), ~rnorm(n = 8, mean = 2200 - .x, sd = 250)) %>% flatten_dbl()
+  # )
 )
 
 gensim <- tibble(
@@ -162,9 +165,47 @@ srf_dat  <- full_dat %>% filter(condition %in% c("A", "B"))
 
 
 full_mod <- brm(data = full_dat,  
-                correct ~ condition * block + (1|subj + image), 
-                family = bernoulli, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                correct ~ condition * block + (1 + subj + block | subj + image + block), 
+                family = bernoulli, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
                 save_pars = save_pars(all = TRUE))
+
+## binom bc why not
+full_aggr <- full_dat %>% 
+  group_by(subj, condition, block) %>% 
+  summarise(
+    k = sum(correct),
+    n = n(),
+    p = k / n
+  ) %>% 
+  ungroup()
+
+mod_aggr <- brm(data = full_aggr,  
+                k|trials(n) ~ condition * block + (1 + block || subj), 
+                family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                save_pars = save_pars(all = TRUE))
+
+mod_aggr_continuous <- brm(data = mutate(full_aggr, block = as.numeric(block)),
+                           k|trials(n) ~ condition * block + (1 + block || subj), 
+                           family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                           save_pars = save_pars(all = TRUE))
+
+aggr_rll <- full_aggr %>% filter(condition %in% c("A", "C")) %>% mutate(block = as.numeric(block))
+aggr_srf <- full_aggr %>% filter(condition %in% c("A", "B")) %>% mutate(block = as.numeric(block))
+
+mod_aggr_rll <- brm(data = aggr_rll,
+                           k|trials(n) ~ condition * block + (1 + block || subj), 
+                           family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                           save_pars = save_pars(all = TRUE))
+
+mod_aggr_srf <- brm(data = aggr_srf,
+                    k|trials(n) ~ condition * block + (1 + block || subj), 
+                    family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                    save_pars = save_pars(all = TRUE))
+
+saveRDS(mod_aggr_continuous, "models/srs_full.rds")
+saveRDS(mod_aggr_rll, "models/srs_rll.rds")
+saveRDS(mod_aggr_srf, "models/srs_srf.rds")
+
 
 ### old fiddling around with RE structure...
 # sim_mod2 <- brm(data = simdat, 
@@ -185,6 +226,7 @@ srf_mod <- brm(data = srf_dat,
                save_pars = save_pars(all = TRUE))
 
 saveRDS(full_mod, "models/simulation_full.rds")
+saveRDS(mod_aggr, "models/simulation_full_binom.rds")
 saveRDS(rll_mod, "models/simulation_rll.rds")
 saveRDS(srf_mod, "models/simulation_srf.rds")
 
@@ -346,7 +388,7 @@ ppc_loo_pit_overlay(y = crits$response,
 
 
 ## as.factor(block) vs. as.numeric(block)
-full_dat <- simdat %>% filter(as.numeric(block) > 2) %>% 
+full_dat <- simt %>% filter(as.numeric(block) > 2) %>% 
   group_by(subj, condition, block) %>% 
   summarise(
     k = sum(correct),

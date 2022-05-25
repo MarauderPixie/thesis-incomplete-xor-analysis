@@ -102,7 +102,7 @@ priors_default <- get_prior(data = mutate(full_aggr, block = as.numeric(block)),
                             family = binomial)
 
 priors <- c(
-  set_prior("normal(-0.9, .3", class = "Intercept"), 
+  set_prior("beta(2, 4)", class = "Intercept"), 
   set_prior('normal(0.14, 0.1)', coef = 'block'),
   set_prior('normal(-0.93, 0.5)', coef = 'conditionB'),
   set_prior('normal(0.16, 0.1)', coef = 'conditionB:block'),

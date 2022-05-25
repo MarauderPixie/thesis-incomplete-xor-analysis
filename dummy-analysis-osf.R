@@ -1,7 +1,32 @@
 library(tidyverse)
 library(brms)
 
-theme_set(hrbrthemes::theme_ipsum_ps())
+theme_set(hrbrthemes::theme_ipsum_rc())
+
+#### C&K'16 exp1 data
+ck <- tibble(
+  k = c(rep(0, 15),
+        1, 1, 1,
+        2, 2,
+        5, 
+        6, 6,
+        7, 7, 7,
+        8,
+        9, 9, 9),
+  n = rep(9, 30),
+  p = k / n
+)
+
+ggplot(ck, aes(k)) +
+  geom_histogram(binwidth = 1, 
+                 color = "black", fill = "gray") +
+  scale_y_continuous(limits = c(0, 30), 
+                     labels = seq(0, 30, by = 5),
+                     breaks = seq(0, 30, by = 5)) + 
+  scale_x_continuous(breaks = 0:9) + 
+  theme(panel.grid.major.x = element_blank(), 
+        panel.grid.minor.x = element_blank(),
+        panel.grid.minor.y = element_blank())
 
 #### condition-assignment: ----
 # A: no rll, no ordering
@@ -119,7 +144,7 @@ simdat <- tibble(
     replicate(25*12, sample(imgs1, 8)) %>% as.vector(),
     replicate(25*12, sample(imgs2, 8)) %>% as.vector(),
     replicate(25*12, sample(imgs1, 8)) %>% as.vector()
-    ) %>% factor(),
+  ) %>% factor(),
   correct = c(
     map(replicate(25, rnorm(12, mean = pmin(1:12/12, .6), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
     map(replicate(25, rnorm(12, mean = pmin(1:12/12, .7), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
@@ -193,9 +218,9 @@ aggr_rll <- full_aggr %>% filter(condition %in% c("A", "C")) %>% mutate(block = 
 aggr_srf <- full_aggr %>% filter(condition %in% c("A", "B")) %>% mutate(block = as.numeric(block))
 
 mod_aggr_rll <- brm(data = aggr_rll,
-                           k|trials(n) ~ condition * block + (1 + block || subj), 
-                           family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
-                           save_pars = save_pars(all = TRUE))
+                    k|trials(n) ~ condition * block + (1 + block || subj), 
+                    family = binomial, cores = ncore, iter = 4000, # 2000 -> low ESS, 4k seem fine
+                    save_pars = save_pars(all = TRUE))
 
 mod_aggr_srf <- brm(data = aggr_srf,
                     k|trials(n) ~ condition * block + (1 + block || subj), 

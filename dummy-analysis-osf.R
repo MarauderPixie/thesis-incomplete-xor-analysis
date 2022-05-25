@@ -115,10 +115,12 @@ simdat <- tibble(
   condition = rep(cond, each = 96),
   block = rep(block, each = 8, times = 100),
   image = c(
-    replicate(25*12, sample(imgs2, 8)) %>% as.vector(),
-    replicate(25*12, sample(imgs1, 8)) %>% as.vector(),
-    replicate(25*12, sample(imgs2, 8)) %>% as.vector(),
-    replicate(25*12, sample(imgs1, 8)) %>% as.vector()
+    replicate(25*12, sample(imgs2)) %>% as.vector(),
+    replicate(25, c(replicate(2, sample(imgs1)), 
+                    replicate(10, sample(imgs2)))) %>% as.vector(),
+    replicate(25*12, sample(imgs2)) %>% as.vector(),
+    replicate(25, c(replicate(2, sample(imgs1)),
+                    replicate(10, sample(imgs2)))) %>% as.vector()
     ) %>% factor(),
   correct = c(
     map(rep(pmin(1:12/12, .6), 25), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),

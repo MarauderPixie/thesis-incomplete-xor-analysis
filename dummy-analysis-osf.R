@@ -148,15 +148,17 @@ simdat <- tibble(
                     replicate(10, sample(imgs2)))) %>% as.vector()
     ) %>% factor(),
   correct = c(
-    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .6), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .7), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .8), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
-    map(replicate(25, rnorm(12, mean = pmin(1:12/12, .9), sd = .05)) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int()
+    map(replicate(25, rbeta(12, 3, 6) %>% sort()) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rbeta(12, 4, 5) %>% sort()) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rbeta(12, 5, 4) %>% sort()) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int(),
+    map(replicate(25, rbeta(12, 6, 3) %>% sort()) %>% as.vector(), ~rbernoulli(n = 8, p = .x)) %>% flatten_int()
   ) # ,
   # rt = c(
   #   map(rnorm(25, 220, 20), ~rnorm(n = 8, mean = 2200 - .x, sd = 250)) %>% flatten_dbl()
   # )
 )
+
+# rbeta(10000, 6, 3) %>% qplot(geom = "density") + scale_x_continuous(limits = 0:1, breaks = seq(0, 1, .2))
 
 gensim <- tibble(
   subj = rep(subj, each = 49),

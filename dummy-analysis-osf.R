@@ -135,10 +135,10 @@ gensim <- tibble(
   condition = rep(cond, each = 49),
   image = replicate(100, sample(gen_state, 49)) %>% as.vector(),
   response = c( # taking it easy...
-    replicate(25, rbernoulli(49, .3)) %>% as.integer(),
-    replicate(25, rbernoulli(49, .5)) %>% as.integer(),
-    replicate(25, rbernoulli(49, .7)) %>% as.integer(),
-    replicate(25, rbernoulli(49, .9)) %>% as.integer()
+    replicate(25, rbernoulli(49, rbeta(1, 2, 4))) %>% as.integer(),
+    replicate(25, rbernoulli(49, rbeta(1, 3, 4))) %>% as.integer(),
+    replicate(25, rbernoulli(49, rbeta(1, 4, 3))) %>% as.integer(),
+    replicate(25, rbernoulli(49, rbeta(1, 4, 2))) %>% as.integer()
   )
 )
 rm(subj, cond, block, imgs1, imgs2, gen_state)

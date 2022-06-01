@@ -119,3 +119,47 @@ mod_priors <- brm(data = mutate(full_aggr, block = as.numeric(block)),
                   family = binomial, cores = ncore, 
                   iter = 4000, prior = priors, 
                   save_pars = save_pars(all = TRUE))
+
+
+
+
+
+
+### idk maybe explore the sim'd data maybe?
+full_dat <- simt %>% 
+  filter(as.numeric(block) > 2) %>% 
+  group_by(subj, condition, block) %>% 
+  summarise(
+    k = sum(correct),
+    n = n(),
+    p = k / n
+  ) %>% 
+  ungroup()
+
+full_aggr <- full_dat %>% 
+  group_by(condition, block) %>% 
+  summarise(
+    k = mean(k),
+    n = mean(n),
+    p = mean(p),
+    sdp = sd(p)
+  ) %>% 
+  ungroup()
+
+ggplot(full_dat, aes(block, p, group = subj)) +
+  geom_line(alpha = .2, size = .4, 
+            position = position_dodge(.2)) +
+  geom_point(position = position_dodge(.2), 
+             alpha = .3, size = .8) +
+  geom_line(data = full_aggr, aes(block, p, group = NA, color = condition), 
+            alpha = .8, size = .8, 
+            position = position_dodge(.2)) +
+  geom_point(data = full_aggr, aes(block, p, group = NA, color = condition), 
+             alpha = .8, size = 2,
+             position = position_dodge(.2)) +
+  facet_wrap(~condition)
+
+ggplot(full_aggr, aes(condition, p, color = condition)) +
+  geom_jitter(color = "#617886", alpha = .3,
+              height = .3, width = .3) +
+  geom_violin(alpha = .2, draw_quantiles = .5)

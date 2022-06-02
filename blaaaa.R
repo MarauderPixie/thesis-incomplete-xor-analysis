@@ -131,7 +131,10 @@ full_dat <- simt %>%
   group_by(subj, condition, block) %>% 
   summarise(
     k = sum(correct),
-    n = n(),
+    n = n()
+  ) %>% 
+  mutate(
+    block = as.numeric(block),
     p = k / n
   ) %>% 
   ungroup()

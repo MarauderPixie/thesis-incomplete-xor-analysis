@@ -69,3 +69,49 @@ mod_test <- brm(k|trials(n) ~ 1 + condition + block + (1 | subj),
                 save_pars = save_pars(all = TRUE),
                 iter = 3000,
                 control=list(adapt_delta=0.9))
+
+mod_test2 <- brm(k|trials(n) ~ condition + block + (1 | subj), 
+                 data = full_dat,
+                 family = binomial(), cores = ncore,
+                 save_pars = save_pars(all = TRUE),
+                 iter = 3000,
+                 control=list(adapt_delta=0.9))
+
+## welp; results are virtually the same, might as well scrap that first "1 +"
+
+dat_AB <- full_dat %>% filter(condition %in% c("A", "B"))
+dat_AC <- full_dat %>% filter(condition %in% c("A", "C"))
+# dat_rll <- full_dat %>% filter(condition == "B")
+# dat_srf <- full_dat %>% filter(condition == "C")
+
+mod_AB <- brm(k|trials(n) ~ condition + block + (1 | subj), 
+              data = dat_AB, iter = 3000,
+              family = binomial(), cores = ncore,
+              save_pars = save_pars(all = TRUE),
+              control=list(adapt_delta=0.9))
+
+mod_AC <- brm(k|trials(n) ~ condition + block + (1 | subj), 
+              data = dat_AC, iter = 3000,
+              family = binomial(), cores = ncore,
+              save_pars = save_pars(all = TRUE),
+              control=list(adapt_delta=0.9))
+##### fun (and soothing) fact:
+# single condition data (without a contrast, that is) do not even work
+# mod_rll <- brm(k|trials(n) ~ condition + block + (1 | subj), 
+#                data = dat_rll, iter = 3000,
+#                family = binomial(), cores = ncore,
+#                save_pars = save_pars(all = TRUE),
+#                control=list(adapt_delta=0.9))
+# 
+# mod_srf <- brm(k|trials(n) ~ condition + block + (1 | subj), 
+#                data = dat_srf, iter = 3000,
+#                family = binomial(), cores = ncore,
+#                save_pars = save_pars(all = TRUE),
+#                control=list(adapt_delta=0.9))
+
+ml_AB <- bridge_sampler(mod_AB)
+ml_AC <- bridge_sampler(mod_AC)
+
+bayes_factor(ml_AB, ml_AC)
+bayes_factor(mod_AB, mod_AC) # soo... if the models haven't been run through the bridge sampler,
+                             # bayes_factor() will just do that for us - nice to know, I guess!

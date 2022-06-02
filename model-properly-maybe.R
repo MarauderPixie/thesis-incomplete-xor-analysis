@@ -28,7 +28,7 @@ bayes_factor(lml1, lml0)
 
 
 #### better yet: closer to the real thang ----
-# these bits need srs revioning
+# these bits need srs revisioning
 bm0 <- brm(k|trials(n) ~ 1 + (1|subj), data = full_dat,
            family = binomial(), cores = ncore,
            save_pars = save_pars(all = TRUE),
@@ -56,3 +56,16 @@ bm2 <- brm(k|trials(n) ~ 1 + condition + block + (1 + block | subj), data = full
 bml2 <- bridge_sampler(bm2)
 
 bayes_factor(bml2, bml1)
+
+### IDEA:
+# instead of comparing models only containing data from condition(s) A, B, C - that is:
+# data_rll = filter(c("A", "B") %in% condition)
+# data_srf = filter(c("A", "C") %in% condition)
+# rather keep all data and specify null model to compare to? e.g. brm(y ~ 1 + (1 | subj), data)
+# ...doesn't help with differentiating h1 from h2 tho /o\
+mod_test <- brm(k|trials(n) ~ 1 + condition + block + (1 | subj), 
+                data = full_dat,
+                family = binomial(), cores = ncore,
+                save_pars = save_pars(all = TRUE),
+                iter = 3000,
+                control=list(adapt_delta=0.9))

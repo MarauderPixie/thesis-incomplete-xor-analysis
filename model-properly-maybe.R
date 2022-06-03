@@ -115,3 +115,44 @@ ml_AC <- bridge_sampler(mod_AC)
 bayes_factor(ml_AB, ml_AC)
 bayes_factor(mod_AB, mod_AC) # soo... if the models haven't been run through the bridge sampler,
                              # bayes_factor() will just do that for us - nice to know, I guess!
+
+#### about the real specification:
+# we want block to be able to vary by subjects and by conditions
+# we also expet an interaction of blocks and condition
+# so a possible formula for my final model might be:
+# k|trials(n) ~ condition * block + (condition + block || subj)
+# (slopes and intercepts of condition and block shouldn't be correlated, 
+#  but I'm not at all too sure about that - the '||' simplifies the model though)
+#
+# so let's try that:
+mod_full_AB <- brm(data = dat_AB,  
+  k|trials(n) ~ condition * block + (condition + block || subj),
+  family = binomial(), cores = ncore,
+  iter = 10000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+mod_full_AC <- brm(data = dat_AC, 
+  k|trials(n) ~ condition * block + (condition + block || subj),
+  family = binomial(), cores = ncore,
+  iter = 10000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+
+bayes_factor(mod_full_AC, mod_full_AB)
+
+
+## and just for the lols:
+## (question even here is: test this for all conditions? each on it's own? and then BF every comparison?)
+mod_full_null <- brm(data = dat_AB, 
+  k|trials(n) ~ condition * block + (condition + block || subj),
+  family = binomial(), cores = ncore,
+  iter = 10000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+# intuitively it makes sense to compute BFs for every subset against their respective null-model
+# and then compute BFs for models which result in some (or more than anecdotic) evidence

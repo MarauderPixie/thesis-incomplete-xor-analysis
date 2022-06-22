@@ -166,3 +166,60 @@ ggplot(full_aggr, aes(condition, p, color = condition)) +
   geom_jitter(color = "#617886", alpha = .3,
               height = .3, width = .3) +
   geom_violin(alpha = .2, draw_quantiles = .5)
+
+
+
+
+
+
+
+
+
+# transfer stuff
+critems <- simg %>% 
+  filter(image == "critical") %>% 
+  group_by(condition, subj) %>% 
+  summarise(
+    k = sum(response),
+    n = n(),
+    p = k / n
+  ) %>% ungroup()
+
+priors <- c(
+  set_prior("normal(-1.2, 0.15)", class = "Intercept"), 
+  set_prior('normal(-0.92, 0.22)', coef = 'conditionB'),
+  set_prior('normal(-0.92, 0.22)', coef = 'conditionC'),
+  set_prior('normal(-0.51, 0.22)', coef = 'conditionD')
+)
+
+# lme4 for comparison
+frmod <- glm(p ~ condition, family = binomial(), data = critems)
+
+# no priors
+tmod1 <- brm(data = critems,
+             k|trials(n) ~ condition,
+             family = binomial(), 
+             cores = ncore, iter = 10000, warmup = 2000,
+             control = list(adapt_delta = 0.9),
+             save_pars = save_pars(all = TRUE)
+)
+
+# some priors
+tmod2 <- brm(data = critems,
+             k|trials(n) ~ condition,
+             family = binomial(), prior = priors,
+             cores = ncore, iter = 10000, warmup = 2000,
+             control = list(adapt_delta = 0.9),
+             save_pars = save_pars(all = TRUE)
+)
+
+
+
+## intbla
+tmod3 <- brm(data = critems,
+             k|trials(n) ~ 1,
+             family = binomial(), 
+             cores = ncore, iter = 10000, warmup = 2000,
+             control = list(adapt_delta = 0.9),
+             save_pars = save_pars(all = TRUE)
+)

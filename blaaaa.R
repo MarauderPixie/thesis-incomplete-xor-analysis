@@ -282,6 +282,26 @@ mod5 <- brm(data = critems,
             save_pars = save_pars(all = TRUE)
 )
 
+mod5_re <- brm(data = critems,
+               k|trials(n) ~ condition + (1 + condition || subj),
+               family = binomial(), prior = priors5,
+               cores = ncore, iter = 10000, warmup = 2000,
+               control = list(adapt_delta = 0.9),
+               save_pars = save_pars(all = TRUE)
+)
+
+berndat <- simg %>% 
+  filter(image == "critical")
+
+mod5_bern <- brm(
+  data = berndat,
+  response ~ condition + (1 + condition || subj),
+  family = bernoulli(), prior = priors5,
+  cores = ncore, iter = 10000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
 
 bayes_factor(mod5, m_int)
 
@@ -315,7 +335,8 @@ odds / (1 + odds)
 # from SO
 # https://stackoverflow.com/questions/70575292/converting-logistic-regression-output-from-log-odds-to-probability
 z <- fixef(mod5)[1] + sum(fixef(mod5)[-1,] * critems[1, ])
-1 / (1 + exp(-z))
+1 / (1 + exp(-z))     # same as: 
+exp(z) / (exp(z) + 1)
 
 
 

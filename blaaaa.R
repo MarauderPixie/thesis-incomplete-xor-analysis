@@ -182,10 +182,11 @@ critems <- simg %>%
   summarise(
     k = sum(response),
     n = n(),
-    p = k / n
+    p = k / n,
+    ext = ifelse(k > 5, 1, 0)
   ) %>% ungroup()
 
-priors <- c(
+priors1 <- c(
   set_prior("normal(-1.2, 0.15)", class = "Intercept"), 
   set_prior('normal(-0.92, 0.22)', coef = 'conditionB'),
   set_prior('normal(-0.92, 0.22)', coef = 'conditionC'),
@@ -204,22 +205,134 @@ tmod1 <- brm(data = critems,
              save_pars = save_pars(all = TRUE)
 )
 
-# some priors
+# some priors of my own devise
 tmod2 <- brm(data = critems,
              k|trials(n) ~ condition,
-             family = binomial(), prior = priors,
+             family = binomial(), prior = priors2,
              cores = ncore, iter = 10000, warmup = 2000,
              control = list(adapt_delta = 0.9),
              save_pars = save_pars(all = TRUE)
 )
 
+tmod3 <- brm(data = critems,
+             k|trials(n) ~ condition,
+             family = binomial(), prior = priors3,
+             cores = ncore, iter = 10000, warmup = 2000,
+             control = list(adapt_delta = 0.9),
+             save_pars = save_pars(all = TRUE)
+)
+
+tmod4 <- brm(data = critems,
+             k|trials(n) ~ condition,
+             family = binomial(), prior = priors4,
+             cores = ncore, iter = 10000, warmup = 2000,
+             control = list(adapt_delta = 0.9),
+             save_pars = save_pars(all = TRUE)
+)
+
+# some priors as "recommended" by gelman
+# // prior sd based on se, that is
+priors2 <- c(
+  set_prior("normal(-1, 0.32)", class = "Intercept"), 
+  set_prior("normal(0, 0.5)", class = "b")
+)
+
+priors3 <- c(
+  set_prior("normal(-1, 0.32)", class = "Intercept"), 
+  # set_prior("normal(0, 0.5)", class = "b"),
+  set_prior('normal(.83, 0.43)', coef = 'conditionB'),
+  set_prior('normal(1.05, 0.43)', coef = 'conditionC'),
+  set_prior('normal(1.78, 0.44)', coef = 'conditionD')
+)
+
+priors4 <- c(
+  set_prior("student_t(5, 0, .32)", class = "Intercept"), 
+  # set_prior("normal(0, 0.5)", class = "b"),
+  set_prior('student_t(5, 0, .43)', coef = 'conditionB'),
+  set_prior('student_t(5, 0, .43)', coef = 'conditionC'),
+  set_prior('student_t(5, 0, .44)', coef = 'conditionD')
+)
+
+priors5 <- c(
+  set_prior("normal(-1, 0.32)", class = "Intercept"), 
+  set_prior("normal(0, 0.5)", class = "b")
+)
+
+## compare to descriptive odds
+table(simg$condition, simg$response)
+( 624/2450) / (1826/2450) |> log() # odds of extrapolation when in A
+(937 /2450) / ( 714/2450) |> log() # odds of extrapolation when in B
+(1098/1352) / ( 624/1826) |> log() # odds of extrapolation in B over A
 
 
 ## intbla
-tmod3 <- brm(data = critems,
+m_int <- brm(data = critems,
              k|trials(n) ~ 1,
              family = binomial(), 
              cores = ncore, iter = 10000, warmup = 2000,
              control = list(adapt_delta = 0.9),
              save_pars = save_pars(all = TRUE)
+)
+
+mod5 <- brm(data = critems,
+            k|trials(n) ~ condition,
+            family = binomial(), prior = priors5,
+            cores = ncore, iter = 10000, warmup = 2000,
+            control = list(adapt_delta = 0.9),
+            save_pars = save_pars(all = TRUE)
+)
+
+
+bayes_factor(mod5, m_int)
+
+
+#### do it like C&K'16
+mod6 <- brm(data = critems,
+            ext ~ condition,
+            family = bernoulli(), prior = priors5,
+            cores = ncore, iter = 10000, warmup = 2000,
+            control = list(adapt_delta = 0.9),
+            save_pars = save_pars(all = TRUE)
+)
+
+#### back to percent and all ----
+# estimates are log-odds, therefore:
+exp(c(-.84, .42, .46))
+# which gives us the (normal) odds, that is...
+ .43 # intercept_only odds; 'chances of extrapolation without any experimental modulation are 0.43:1"
+1.52 # odds of srf & rrl each in relation to intercept_only
+1.58 # odss of srf + rrl in rel. to int.
+# which means:
+ .43 / (1 +  .43) # probability of extrapolation in condA/intercept_only
+1.52 / (1 + 1.52) # change in probability of extrapolation of either srf & rrl
+# therefore
+.3 + 0.3 * 0.6 # estimated probability of extrapolation in condB/C (srf / rrl)
+
+# in short:
+odds <- fixef(mod5) %>% exp()
+odds / (1 + odds)
+
+# from SO
+# https://stackoverflow.com/questions/70575292/converting-logistic-regression-output-from-log-odds-to-probability
+z <- fixef(mod5)[1] + sum(fixef(mod5)[-1,] * critems[1, ])
+1 / (1 + exp(-z))
+
+
+
+#### auch eine Möglichkeit: ----
+# Interaction zw. rrl & srf
+intact <- critems %>% 
+  mutate(
+    intercept = ifelse(condition == "A", 1, 0),
+    rrl  = ifelse(condition == "B", 1, 0),
+    srf  = ifelse(condition == "C", 1, 0),
+    both = ifelse(condition == "D", 1, 0)
+  )
+
+mod7 <- brm(data = intact,
+            k|trials(n) ~ rrl + srf * both,
+            family = binomial(), prior = priors5,
+            cores = ncore, iter = 10000, warmup = 2000,
+            control = list(adapt_delta = 0.9),
+            save_pars = save_pars(all = TRUE)
 )

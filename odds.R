@@ -33,7 +33,7 @@ exp(beta0)/(1 + exp(beta0))
 
 ### srf model
 ### // prob & odds of extrapolation when exposed to srf
-t1 <- table(tdat$lbl, tdat$condition)
+t1 <- table(tdat$condition, tdat$lbl)
 t1
 
 # odds for extra are:

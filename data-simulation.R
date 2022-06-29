@@ -6,7 +6,7 @@ block <- as_factor(1:12)
 imgs1 <- rep(paste0("img", 1:4), 2)
 imgs2 <- c(paste0("img", 1:6), imgs1[1:2])
 # gimgs <- paste0("img", str_pad(1:49, 2, pad = "0"))
-gen_state <- c(rep("critical", 9), rep("midlane", 13), rep("regular", 27))
+img_cluster <- c(rep("untrained", 9), rep("equivocal", 13), rep("trained", 27))
 
 simdat <- tibble(
   subj = rep(subj, each = 96),
@@ -32,17 +32,18 @@ simdat <- tibble(
 )
 
 gensim <- tibble(
-  subj = rep(subj, each = 49),
+  subj      = rep(subj, each = 49),
   condition = rep(cond, each = 49),
-  image = replicate(n_subj, sample(gen_state, 49)) %>% as.vector(),
-  response = c( # taking it easy...
+  img_cluster = replicate(n_subj, sample(img_cluster, 49)) %>% as.vector(),
+  # img_id    = c(), 
+  response  = c( # taking it easy...
     replicate((n_subj/4), rbernoulli(49, rbeta(1, 3, 6))) %>% as.integer(),
     replicate((n_subj/4), rbernoulli(49, rbeta(1, 3, 5))) %>% as.integer(),
     replicate((n_subj/4), rbernoulli(49, rbeta(1, 4, 6))) %>% as.integer(),
     replicate((n_subj/4), rbernoulli(49, rbeta(1, 3, 4))) %>% as.integer()
   )
 )
-rm(subj, cond, block, imgs1, imgs2, gen_state)
+rm(subj, cond, block, imgs1, imgs2, img_cluster)
 
 saveRDS(simdat, "data-raw/simulated_training.rds")
 saveRDS(gensim, "data-raw/simulated_generalization.rds")

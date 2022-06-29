@@ -41,3 +41,7 @@ vignettes/*.pdf
 
 # project specific stuff
 _old_messy-dummy-data.csv
+/models
+onsetBayLog.txt
+CopyOf--dummy-analysis.R
+*.Rproj

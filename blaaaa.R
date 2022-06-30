@@ -344,14 +344,12 @@ exp(z) / (exp(z) + 1)
 # Interaction zw. rrl & srf
 intact <- critems %>% 
   mutate(
-    intercept = ifelse(condition == "A", 1, 0),
-    rrl  = ifelse(condition == "B", 1, 0),
-    srf  = ifelse(condition == "C", 1, 0),
-    both = ifelse(condition == "D", 1, 0)
+    rrl  = ifelse(condition == "B" | condition == "D", 1, 0),
+    srf  = ifelse(condition == "C" | condition == "D", 1, 0)
   )
 
 mod7 <- brm(data = intact,
-            k|trials(n) ~ rrl + srf * both,
+            k|trials(n) ~ rrl * srf,
             family = binomial(), prior = priors5,
             cores = ncore, iter = 10000, warmup = 2000,
             control = list(adapt_delta = 0.9),

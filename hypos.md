@@ -33,7 +33,23 @@ H4: Both effects in question will yield -->
 
 
 
+# Research questions
 
-# New and improved
+RQ1: Does rule-related language facilitate category extrapolation of the novel stimuli during the transfer phase?
+RQ2: Does the learning of a simple rule structure followed by a more complex one facilitate extrapolation?
 
-- **H1.1:** 
+
+# Hypotheses - New and improved
+
+- **H1:** Main effect of 'rule related language' (rrl)
+- **H1.1:** _(directed)_ higher odds of correct categorization during training
+- **H1.2:** _(directed)_ higher odds of extrapolating categories during transfer
+
+- **H2:** Main effect of 'simple rule first' (rrl)
+- **H2.1:** _(directed)_ higher odds of correct categorization during training
+- **H2.2:** _(directed)_ higher odds of extrapolating categories during transfer
+
+<!--
+- **H3:** Interaction of rrl and srf
+- **H3.1:** _(undirected)_ change in odds of extrapolation during transfer
+-->

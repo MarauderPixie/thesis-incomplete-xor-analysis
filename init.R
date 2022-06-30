@@ -9,4 +9,4 @@ theme_set(hrbrthemes::theme_ipsum_ps(plot_margin = margin(10, 10, 10, 10)) +
 ncore <- parallel::detectCores()
 
 simt <- readRDS("data-raw/simulated_training.rds")
-simg <- readRDS("data-raw/simulated_generalization.rds")
+simg <- readRDS("data-raw/simulated_transfer.rds")

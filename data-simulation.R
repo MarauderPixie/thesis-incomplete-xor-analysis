@@ -46,4 +46,4 @@ gensim <- tibble(
 rm(subj, cond, block, imgs1, imgs2, img_cluster)
 
 saveRDS(simdat, "data-raw/simulated_training.rds")
-saveRDS(gensim, "data-raw/simulated_generalization.rds")
+saveRDS(gensim, "data-raw/simulated_transfer.rds")

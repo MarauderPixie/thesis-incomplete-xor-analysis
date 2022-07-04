@@ -182,8 +182,7 @@ critems <- simg %>%
   summarise(
     k = sum(response),
     n = n(),
-    p = k / n,
-    ext = ifelse(k > 5, 1, 0)
+    p = k / n
   ) %>% ungroup()
 
 priors1 <- c(

@@ -43,7 +43,7 @@ gensim <- tibble(
     replicate((n_subj/4), rbernoulli(49, rbeta(1, 3, 4))) %>% as.integer()
   )
 )
-rm(subj, cond, block, imgs1, imgs2, img_cluster)
+rm(n_subj, subj, cond, block, imgs1, imgs2, img_cluster)
 
 saveRDS(simdat, "data-raw/simulated_training.rds")
 saveRDS(gensim, "data-raw/simulated_transfer.rds")

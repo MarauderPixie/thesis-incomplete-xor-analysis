@@ -38,6 +38,14 @@ H4: Both effects in question will yield -->
 RQ1: Does rule-related language facilitate category extrapolation of the novel stimuli during the transfer phase?
 RQ2: Does the learning of a simple rule structure followed by a more complex one facilitate extrapolation?
 
+maybe Evan Betteryet (2022):
+
+RQ1.1: Does the mentioning of rules lead to better learning performance / higher categorization accuracy?
+RQ1.2: Does it lead _faster_ reaching high catgeorization accuracies?
+RQ1.3: Does it lead to more extrapolations of unlearned stimulus categories?
+
+RQ2.1: Does learning a simple categorisation rule before encountering a more complex one lead to better learning performance?
+RQ2.2: 
 
 # Hypotheses - New and improved
 
@@ -53,3 +61,52 @@ RQ2: Does the learning of a simple rule structure followed by a more complex one
 - **H3:** Interaction of rrl and srf
 - **H3.1:** _(undirected)_ change in odds of extrapolation during transfer
 -->
+
+**H4:** Interaction of main effects (h1 & 2) with training blocks
+
+
+
+
+# Real Deal
+
+## Research questions
+
+1.1 Does learning a simple rule before encountering a more complex one facilitate the extrapolation of novel stimuli?
+1.2 Does rule-related language facilitate the extrapolation of novel stimuli?
+
+2. Does the learning process improve by...
+2.1 ...using rule related language?
+2.2 ...first learning a simple followed by a more complex one?
+
+2. Does the increase in extrapolations also lead to a better learning performance...
+2.1 
+2.2 when using rule related language?
+
+3. Are response times in a 'simple rule first' condition affected by a rule-switch - that is, by novel items?
+
+4. Apart from categorical decisions, is there a relation between probability judgements regarding an items category and the respective items specificity? (might need some work, wording-wise; question is: "are probability judgements higher for items belonging to either one category, the more extreme the items dimensional characteristic? That is: "The 'blacker' or 'whiter', smaller or bigger the item, the higher the probability judgement?")
+
+
+
+### Hypotheses
+
+1.1 (directed) Higher number of extrapolations for the items of the untrained/incomplete category in the 'simple rule first' condition
+1.2 (directed) Higher number of extrapolations for the items of the untrained/incomplete category in the 'simple rule first' condition
+1.3 (undirected) Interaction of the 'simple rule first' and the 'rule related language' condition on the number of extrapolations of the untrained/incomplete category
+
+2.1 (undirected) Interaction of learning accuracy between training block (1-10) and rule related language (vs. no mentioning of rules) in the simple rule first condition
+2.2 (undirected) same as 2.1 but in the mixed rules condition
+2.3 (directed) Learning accuracy will be higher when exposed to rule related language (vs. no mentioning of rules) in the mixed rules condition...
+2.4 ...as well as in the simple rule first condition
+
+3.1 (directed) Response times for established items will be lower than for novel items in training
+3.2 (directed) Response times for trained categories will be lower than for the untrained category in transfer
+
+4.1 (directed) Probability judgements are higher for items with more extreme dimensional characteristics
+
+
+
+Varianz (in transfer):
+trained_item > trained_category ~= untrained_category > unequivocal_item ("midlanes")   ...?
+
+

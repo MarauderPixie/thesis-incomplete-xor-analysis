@@ -177,12 +177,13 @@ ggplot(full_aggr, aes(condition, p, color = condition)) +
 
 # transfer stuff
 critems <- simg %>% 
-  filter(image == "critical") %>% 
+  filter(img_cluster == "untrained") %>% 
   group_by(condition, subj) %>% 
   summarise(
     k = sum(response),
     n = n(),
-    p = k / n
+    p = k / n,
+    ext = ifelse(k > 5, 1, 0)
   ) %>% ungroup()
 
 priors1 <- c(
@@ -350,6 +351,14 @@ intact <- critems %>%
 mod7 <- brm(data = intact,
             k|trials(n) ~ rrl * srf,
             family = binomial(), prior = priors5,
+            cores = ncore, iter = 10000, warmup = 2000,
+            control = list(adapt_delta = 0.9),
+            save_pars = save_pars(all = TRUE)
+)
+
+mod7 <- brm(data = intact,
+            ext ~ rrl * srf,
+            family = bernoulli(), prior = priors5,
             cores = ncore, iter = 10000, warmup = 2000,
             control = list(adapt_delta = 0.9),
             save_pars = save_pars(all = TRUE)

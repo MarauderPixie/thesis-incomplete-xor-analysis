@@ -1,0 +1,23 @@
+submission_id,rules,blocked,duration,age,languages,strategy
+15,0,1,683.153,33,deutsch,"dunkel = nobz
+hell = grot
+hell und größer als bestimmen Quadrat = nobz"
+16,0,0,418.567,34,deutsch,NA
+17,1,0,810.961,26,"deutsch, russisch","Nach den zurechtgelegten Kriterien - große und schwarze Objekte vs. kleine und helle Objekte, bei den mittelgroßen & mittel hellen/dunklen: nach Empfinden - eher zu weiß gehörig oder eher zu schwarz gehörig; eher zu klein gehörig oder eher zu groß gehörig"
+18,1,1,597.551,26,deutsch,einteilung: groß Oder schwarz vs klein
+19,1,0,6392.616,31,deutsch,"Je dunkler und oder größer, desto Grot.
+Nobz eigentlich nur bei seeehr hellem Grau, sowie sehr kleinem Quadrat."
+20,0,0,2674.124,34,deutsch,"Versucht Größe und Schattierung zuzuordnen, das wurde jedoch bei den neuen Schattierungen (dunkelgrau, nicht hell und nicht schwarz) etwas tricky."
+21,0,0,639.526,27,deutsch,Nach Gefühl
+22,0,1,699.178,36,deutsch,"dunkel und groß = zweite Kategorie, dabei war ich bei den mittelgroßen und mitteldunklen unsicher"
+23,1,0,529.336,36,deutsch,fast alles war ein Nobz. hab mich verarscht gefühlt xD
+24,1,1,975.802,37,deutsch,"gefüllt - grot, ungefüllt - andere kategorie.
+außer bei den ganz großen kästchen, da wars umgekehrt. 
+
+und dann bei den unterschiedlichen schattierungen hab ichs davon abhängig gemacht, ob ich die außenkante der kästchen erkennen konnte. wenn das der fall war, dann wars eher ungefüllt."
+25,0,0,885.416,33,deutsch,"ausgehend von der erlernten Kategorisierung habe ich tendenziell dunklere kleine-mittlere und große in die nobz-Kategorie eingeteilt, kleine, helle und mittel-helle bis mittlere Größen in die grot-Kategorie"
+26,0,1,869.227,46,deutsch,"Nobz = alles, was mindestens die dritte von vier Größen hatte oder mehr als nur hellgrau war"
+27,1,0,667.212,30,Deutsch,NA
+28,1,1,628.433,36,deutsch,NA
+29,0,0,409.118,NA,NA,NA
+30,0,1,893.001,33,Deutsch,"Die Muster aus der ersten Aufgabe waren eindeutig (Klein = Grot, Groß = Nobz, schwarze Farbe kehrt diese Klassifizierung um), insofern habe ich beim zweiten Abschnitt eingeschätzt, wie groß und eindeutig schwarz (im Gegensatz zu dunklem Grau) die Quadrate sind."

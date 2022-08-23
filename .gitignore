@@ -45,3 +45,4 @@ _old_messy-dummy-data.csv
 onsetBayLog.txt
 CopyOf--dummy-analysis.R
 *.Rproj
+/data-raw/

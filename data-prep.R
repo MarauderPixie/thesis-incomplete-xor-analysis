@@ -23,7 +23,7 @@ critical <- paste0(
 )
 
 ## experimental data
-all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--160822.csv") %>% 
+all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
   mutate(
     submission_id = as_factor(submission_id),
     rules    = ifelse(condition == 3 | condition == 4, "yes", "no"),

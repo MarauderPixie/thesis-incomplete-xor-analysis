@@ -1,13 +1,26 @@
-library(tidyverse)
+source("init.R")
+
+library(httr)
+library(rvest)
+
+# n_total <- GET(
+#   "https://magpie.jemu.name/experiments", 
+#   authenticate(user, pass)
+# ) |>
+#   content() |>
+#   html_node("tr:nth-child(3) td:nth-child(4)") |>
+#   html_text2() |>
+#   as.integer()
+
 
 ## trial data
 # trial_blocked_shape <- read_csv("data-trials/training-blocked-shape.csv")
 # trial_blocked_size  <- read_csv("data-trials/training-blocked-size.csv")
 # trial_mixed         <- read_csv("data-trials/training-mixed.csv")
-trial_transfer      <- read_csv("data-trials/transfer.csv") %>% 
+trial_transfer <- read_csv("data-trials/transfer.csv") %>% 
   mutate(
-    img_x = rep(1:7, times = 7),
-    img_y = rep(1:7, each = 7)
+    img_x = rep(1:7, each = 7),
+    img_y = rep(1:7, times = 7)
   )
 
 ## transfer images
@@ -23,7 +36,15 @@ critical <- paste0(
 )
 
 ## experimental data
-all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
+source("magpie-credentials.R")
+
+all_data <- GET(
+  "https://magpie.jemu.name/experiments/7/retrieve",
+  authenticate(user, pass)
+) |>
+  content(as = "text", encoding = "UTF-8") |>
+  read_csv() %>% 
+# all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
   mutate(
     submission_id = as_factor(submission_id),
     rules    = ifelse(condition == 3 | condition == 4, "yes", "no"),
@@ -85,6 +106,7 @@ dprob <- all_data %>%
   filter(is.na(correct1), is.na(response)) %>% 
   left_join(trial_transfer, by = "image") %>% 
   mutate(
+    prob = ifelse(is.na(prob), 50, prob),
     item = case_when(
       image %in% critical ~ "transfer",
       image %in% neutral ~ "neutral",
@@ -108,5 +130,5 @@ saveRDS(dtrain,    "data-clean/trials-training.rds")
 saveRDS(dtrans,    "data-clean/trials-transfer.rds")
 saveRDS(dprob,     "data-clean/trials-probability.rds")
 
-rm(trial_transfer, critical, neutral, all_data,
-   data_post, dtrain, dtrans, dprob)
+rm(pass, user, trial_transfer, critical, 
+   neutral, all_data, data_post, dtrain, dtrans, dprob)

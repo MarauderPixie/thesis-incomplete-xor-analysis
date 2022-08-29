@@ -46,3 +46,4 @@ onsetBayLog.txt
 CopyOf--dummy-analysis.R
 *.Rproj
 /data-raw/
+magpie-credentials.R

@@ -14,7 +14,18 @@ exctest <- training %>%
     n = n(),
     k = sum(correct),
     p = k / n
-  )
+  ) %>% 
+  filter(p < .7)
+
+
+training <- training %>% 
+  filter(!(submission_id %in% exctest$submission_id))
+transfer <- transfer %>% 
+  filter(!(submission_id %in% exctest$submission_id))
+stimprob <- stimprob %>% 
+  filter(!(submission_id %in% exctest$submission_id))
+
+
 
 sumstats <- training %>% 
   group_by(submission_id) %>% 

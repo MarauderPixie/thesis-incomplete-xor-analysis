@@ -1,10 +1,11 @@
 source("init.R")
+source("magpie-credentials.R")
 
 library(httr)
 library(rvest)
 
 # n_total <- GET(
-#   "https://magpie.jemu.name/experiments", 
+#   "https://magpie.jemu.name/experiments",
 #   authenticate(user, pass)
 # ) |>
 #   content() |>
@@ -36,8 +37,6 @@ critical <- paste0(
 )
 
 ## experimental data
-source("magpie-credentials.R")
-
 all_data <- GET(
   "https://magpie.jemu.name/experiments/7/retrieve",
   authenticate(user, pass)

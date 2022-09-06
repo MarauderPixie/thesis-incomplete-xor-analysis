@@ -154,6 +154,18 @@ transfer %>%
   nrow()
 
 
+## cross tableing / do it like C&K
+catype <- transfer %>%
+  filter(item == "transfer") %>% 
+  group_by(submission_id, condition) %>% 
+  summarise(
+    k = sum(extrapol),
+    type = ifelse(k > 5, "extra", "proxy")
+  )
+
+table(catype$condition, catype$type)
+
+
 ## shrug
 acc_trans <- transfer %>% 
   filter(item == "training") %>% 

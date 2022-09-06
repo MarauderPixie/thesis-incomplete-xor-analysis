@@ -53,7 +53,8 @@ all_data <- GET(
     condition = case_when(condition == 1 ~ "control",
                           condition == 2 ~ "blocked",
                           condition == 3 ~ "rules",
-                          condition == 4 ~ "both"),
+                          condition == 4 ~ "both") %>% 
+      as_factor() %>% fct_relevel("control", "rules", "blocked"),
     ext_cat  = ifelse(assignment == "correct1", "Grot", "Nobz"),
     duration = experiment_duration / 1000
   )

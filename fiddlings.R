@@ -77,8 +77,8 @@ training %>%
   summarise(
     acc = mean(cmsm)
   ) %>% 
-  ggplot(aes(trial, acc, color = condition)) +
-  geom_line()
+  ggplot(aes(acc, log(trial), color = condition)) +
+    geom_line()
 
 
 
@@ -88,7 +88,7 @@ transfer %>%
   group_by(submission_id) %>% 
   summarise(ext = sum(extrapol)) %>% 
   ggplot(aes(ext)) +
-  geom_histogram(fill = "#f0f0f0", color = "#13191C", binwidth = 1) +
+  geom_histogram(fill = "#3c4c72", color = "#f0f0f0", binwidth = 1) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 9))
 
 

@@ -25,7 +25,19 @@ transfer <- transfer %>%
 stimprob <- stimprob %>% 
   filter(!(submission_id %in% exctest$submission_id))
 
+dur <- quantile(demo$duration, c(.025, .95)) |> as.numeric()
 
+demo %>% 
+  filter(between(duration, dur[1], dur[2])) %>% 
+  gather(var, val, age, duration) %>% 
+  group_by(var) %>% 
+  summarise(
+    min    = min(val),
+    mean   = mean(val),
+    median = median(val),
+    max    = max(val),
+    sd     = sd(val)
+  )
 
 sumstats <- training %>% 
   group_by(submission_id) %>% 
@@ -55,14 +67,32 @@ training %>%
   ) %>% 
   ungroup() %>% 
   ggplot(aes(block, acc_mean, color = condition, group = condition)) +
-  geom_line(position = position_dodge(0.3)) +
-  geom_point(position = position_dodge(0.3), size = 2) +
-  geom_linerange(aes(ymax = acc_hi, ymin = acc_lo),
-                 position = position_dodge(0.3)) +
-  scale_color_brewer(palette = "Set1") +
-  scale_x_continuous(breaks = scales::pretty_breaks(n = 12))
+    geom_line(position = position_dodge(0.3)) +
+    geom_point(position = position_dodge(0.3), size = 2) +
+    geom_linerange(aes(ymax = acc_hi, ymin = acc_lo),
+                   position = position_dodge(0.3)) +
+    scale_color_brewer(palette = "Set1") +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 12))
 
-## learning curves
+## sorta replica of zhe paper
+training %>% 
+  group_by(submission_id, rules, blocked, block) %>% 
+  summarise(
+    accuracy = mean(correct),
+    rt_mean  = mean(response_time),
+    rt_sd    = sd(response_time)
+  ) %>% 
+  mutate(
+    block = as_factor(block),
+    tick = rep(1:6, each = 2) |> as_factor()
+  ) %>% 
+  ungroup() %>% 
+  ggplot(aes(tick, accuracy, fill = rules)) +
+    # geom_half_violin(side = "l") +
+    # geom_half_dotplot(binwidth = .125, dotsize = .125)
+  
+
+geom_half## learning curves
 ## ...or so I thought, pretty darn uninteresting :c
 training %>% 
   group_by(submission_id, condition) %>% 

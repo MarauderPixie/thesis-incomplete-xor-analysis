@@ -45,7 +45,7 @@ all_data <- GET(
   read_csv() %>% 
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
   mutate(
-    submission_id = as_factor(submission_id),
+    subj_id  = as_factor(submission_id),
     rules    = ifelse(condition == 3 | condition == 4, "yes", "no"),
     blocked  = ifelse(condition == 2 | condition == 4, "yes", "no"),
     # rules    = as_factor(rules),
@@ -55,12 +55,14 @@ all_data <- GET(
                           condition == 3 ~ "rules",
                           condition == 4 ~ "both") %>% 
       as_factor() %>% fct_relevel("control", "rules", "blocked"),
-    ext_cat  = ifelse(assignment == "correct1", "Grot", "Nobz"),
-    duration = experiment_duration / 1000
+    ext_cat   = ifelse(assignment == "correct1", "Grot", "Nobz"),
+    submitted = lubridate::as_datetime(experiment_end_time / 1000, 
+                                       tz = "Europe/Berlin"),
+    duration  = experiment_duration / 1000
   )
 
 data_post <- all_data %>% 
-  select(submission_id, condition, rules, blocked, age, duration, languages, strategy) %>% 
+  select(submitted, subj_id, condition, rules, blocked, age, duration, languages, strategy) %>% 
   distinct()
 
 dtrain <- all_data %>% 
@@ -69,12 +71,12 @@ dtrain <- all_data %>%
     correct_item = ifelse(assignment == "correct1", correct1, correct2),
     correct = response == correct_item
   ) %>% 
-  group_by(submission_id) %>% 
+  group_by(subj_id) %>% 
   mutate(
     trial = seq(1:96),
     block = rep(1:12, each = 8)
   ) %>% 
-  select(submission_id, condition, rules, blocked, 
+  select(subj_id, condition, rules, blocked, 
          trial, block, image, correct, response_time) %>% 
   ungroup()
 
@@ -99,7 +101,7 @@ dtrans <- all_data %>%
       TRUE ~ NA
     )
   ) %>% 
-  select(submission_id, condition, rules, blocked, assignment, image, 
+  select(subj_id, condition, rules, blocked, assignment, image, 
          item, response, correct, extrapol, response_time, img_x, img_y)
 
 dprob <- all_data %>% 
@@ -115,7 +117,7 @@ dprob <- all_data %>%
     probA = 100 - prob,
     probB = prob,
   ) %>% 
-  select(submission_id, condition, rules, blocked, assignment, image, 
+  select(subj_id, condition, rules, blocked, assignment, image, 
          probA, probB, response_time, img_x, img_y)
 
 

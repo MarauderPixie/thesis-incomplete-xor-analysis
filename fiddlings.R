@@ -9,7 +9,7 @@ stimprob <- readRDS("data-clean/trials-probability.rds")
 
 exctest <- training %>% 
   filter(block > 9) %>% 
-  group_by(submission_id) %>% 
+  group_by(subj_id) %>% 
   summarise(
     n = n(),
     k = sum(correct),
@@ -19,11 +19,11 @@ exctest <- training %>%
 
 
 training <- training %>% 
-  filter(!(submission_id %in% exctest$submission_id))
+  filter(!(subj_id %in% exctest$subj_id))
 transfer <- transfer %>% 
-  filter(!(submission_id %in% exctest$submission_id))
+  filter(!(subj_id %in% exctest$subj_id))
 stimprob <- stimprob %>% 
-  filter(!(submission_id %in% exctest$submission_id))
+  filter(!(subj_id %in% exctest$subj_id))
 
 dur <- quantile(demo$duration, c(.025, .95)) |> as.numeric()
 
@@ -40,7 +40,7 @@ demo %>%
   )
 
 sumstats <- training %>% 
-  group_by(submission_id) %>% 
+  group_by(subj_id) %>% 
   summarise(
     accuracy = mean(correct),
     rt_mean  = mean(response_time),
@@ -49,7 +49,7 @@ sumstats <- training %>%
 
 ## training accuracy between groups
 training %>% 
-  group_by(condition, submission_id, block) %>% 
+  group_by(condition, subj_id, block) %>% 
   summarise(
     accuracy = mean(correct),
     rt_mean  = mean(response_time),
@@ -76,9 +76,10 @@ training %>%
 
 ## sorta replica of zhe paper
 training %>% 
-  group_by(submission_id, rules, blocked, block) %>% 
+  group_by(subj_id, rules, blocked, block) %>% 
   summarise(
     accuracy = mean(correct),
+    acc_sd   = sd(correct),
     rt_mean  = mean(response_time),
     rt_sd    = sd(response_time)
   ) %>% 
@@ -87,15 +88,72 @@ training %>%
     tick = rep(1:6, each = 2) |> as_factor()
   ) %>% 
   ungroup() %>% 
+  group_by(subj_id, rules, blocked, tick) %>% 
+  summarise(
+    accuracy = mean(accuracy),
+    acc_sd   = mean(acc_sd),
+    rt_mean  = mean(rt_mean),
+    rt_sd    = mean(rt_sd)
+  ) %>% 
   ggplot(aes(tick, accuracy, fill = rules)) +
-    # geom_half_violin(side = "l") +
-    # geom_half_dotplot(binwidth = .125, dotsize = .125)
+    geom_half_violin(side = "r") +
+    geom_half_dotplot(binwidth = .125, dotsize = .125)
+
+
+## funny; how to deal with RT outliers?
+train_subj <- training %>% 
+  group_by(subj_id) %>% 
+  mutate(
+    block = as_factor(block),
+    tick = rep(1:6, each = 16) |> as_factor()
+  ) %>% 
+  filter(response_time < quantile(response_time, .95)) %>% 
+  group_by(subj_id, rules, blocked, tick) %>% 
+  summarise(
+    accuracy = mean(correct),
+    acc_sd   = sd(correct),
+    rt_mean  = mean(response_time),
+    rt_sd    = sd(response_time)
+  ) %>% 
+  ungroup()
+
+train_aggr <- train_subj %>% 
+  group_by(tick, rules, blocked) %>% 
+  summarise(
+    n = n(),
+    accuracy = mean(accuracy),
+    acc_sd   = sd(acc_sd),
+    acc_se_hi = accuracy + acc_sd / sqrt(n), 
+    acc_se_lo = accuracy - acc_sd / sqrt(n), 
+    acc_ci_hi = accuracy + qt(.975, n-1) * (acc_sd / sqrt(n)),
+    acc_ci_lo = accuracy - qt(.975, n-1) * (acc_sd / sqrt(n)),
+    rt_mean  = mean(rt_mean),
+    rt_sd    = sd(rt_sd),
+    rt_se_hi = rt_mean + rt_sd / sqrt(n), 
+    rt_se_lo = rt_mean - rt_sd / sqrt(n), 
+    rt_ci_hi = rt_mean + qt(.975, n-1) * (rt_sd / sqrt(n)),
+    rt_ci_lo = rt_mean - qt(.975, n-1) * (rt_sd / sqrt(n)),
+  ) %>% 
+  ungroup()
   
 
-geom_half## learning curves
+ggplot() +
+  geom_half_violin(data = train_subj, color = NA,
+                   aes(tick, rt_mean, fill = rules),
+                   side = "r") +
+  geom_pointrange(data = train_aggr,
+                  aes(tick, rt_mean, color = rules,
+                      ymax = rt_se_hi, ymin = rt_se_lo),
+                  position = position_dodge(.5)) +
+  scale_color_brewer(palette = "Set1") +
+  scale_fill_brewer(palette = "Set1")
+
+  
+
+## learning curves
 ## ...or so I thought, pretty darn uninteresting :c
 training %>% 
-  group_by(submission_id, condition) %>% 
+  group_by(subj_id, condition) %>% 
   summarise(
     cmsm = cumsum(correct)
   ) %>% 
@@ -115,7 +173,7 @@ training %>%
 ## histogram of proximations & extrapolations
 transfer %>% 
   filter(item == "transfer") %>% 
-  group_by(submission_id) %>% 
+  group_by(subj_id) %>% 
   summarise(ext = sum(extrapol)) %>% 
   ggplot(aes(ext)) +
   geom_histogram(fill = "#3c4c72", color = "#f0f0f0", binwidth = 1) +
@@ -174,7 +232,7 @@ transfer %>%
 ## plausibility & sanity check: didn't they learn anything?
 transfer %>% 
   filter(item == "training") %>% 
-  group_by(submission_id) %>% 
+  group_by(subj_id) %>% 
   summarise(
     n = n(),
     k = sum(correct),
@@ -187,7 +245,7 @@ transfer %>%
 ## cross tableing / do it like C&K
 catype <- transfer %>%
   filter(item == "transfer") %>% 
-  group_by(submission_id, condition) %>% 
+  group_by(subj_id, condition) %>% 
   summarise(
     k = sum(extrapol),
     type = ifelse(k > 5, "extra", "proxy")
@@ -199,7 +257,7 @@ table(catype$condition, catype$type)
 ## shrug
 acc_trans <- transfer %>% 
   filter(item == "training") %>% 
-  group_by(submission_id, condition) %>% 
+  group_by(subj_id, condition) %>% 
   summarise(
     n = n(),
     k = sum(correct),
@@ -207,8 +265,8 @@ acc_trans <- transfer %>%
   )
 
 acc_corr <- sumstats %>% 
-  left_join(acc_trans, by = "submission_id") %>% 
-  select(submission_id, condition, accuracy, p) %>% 
+  left_join(acc_trans, by = "subj_id") %>% 
+  select(subj_id, condition, accuracy, p) %>% 
   rename("training" = accuracy, "transfer" = p)
 
 ggplot(acc_corr, aes(training, transfer)) +

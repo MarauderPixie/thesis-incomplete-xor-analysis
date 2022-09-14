@@ -17,7 +17,8 @@ exctest <- training %>%
   ) %>% 
   filter(p < .7)
 
-
+demo <- demo %>% 
+  filter(!(subj_id %in% exctest$subj_id))
 training <- training %>% 
   filter(!(subj_id %in% exctest$subj_id))
 transfer <- transfer %>% 

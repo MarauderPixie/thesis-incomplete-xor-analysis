@@ -132,5 +132,11 @@ saveRDS(dtrain,    "data-clean/trials-training.rds")
 saveRDS(dtrans,    "data-clean/trials-transfer.rds")
 saveRDS(dprob,     "data-clean/trials-probability.rds")
 
+fs::dir_copy(
+  "data-clean/", 
+  "../writing-thesisdown/data/", 
+  overwrite = TRUE
+)
+
 rm(pass, user, trial_transfer, critical, 
    neutral, all_data, data_post, dtrain, dtrans, dprob)

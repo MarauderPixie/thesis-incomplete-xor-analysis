@@ -134,7 +134,7 @@ saveRDS(dprob,     "data-clean/trials-probability.rds")
 
 fs::dir_copy(
   "data-clean/", 
-  "../writing-thesisdown/data/", 
+  "../writing/data/", 
   overwrite = TRUE
 )
 

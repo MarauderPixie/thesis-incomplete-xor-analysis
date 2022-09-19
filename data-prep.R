@@ -45,6 +45,16 @@ all_data <- GET(
   read_csv() %>% 
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
   mutate(
+    correct_normalized = case_when(
+      assignment == "correct2" & correct2 == "Nobz" ~ "Grot",
+      assignment == "correct2" & correct2 == "Grot" ~ "Nobz",
+      TRUE ~ correct1
+    ),
+    response_normalized = case_when(
+      assignment == "correct2" & response == "Nobz" ~ "Grot",
+      assignment == "correct2" & response == "Grot" ~ "Nobz",
+      TRUE ~ response
+    ),
     subj_id  = as_factor(submission_id),
     rules    = ifelse(condition == 3 | condition == 4, "yes", "no"),
     blocked  = ifelse(condition == 2 | condition == 4, "yes", "no"),
@@ -55,32 +65,37 @@ all_data <- GET(
                           condition == 3 ~ "rules",
                           condition == 4 ~ "both") %>% 
       as_factor() %>% fct_relevel("control", "rules", "blocked"),
-    ext_cat   = ifelse(assignment == "correct1", "Grot", "Nobz"),
+    #### IMPORTANT - esp. further down the line! ####
+    # ain't ext_cat always "Grot" after normalizing?
+    # ext_cat   = ifelse(assignment == "correct1", "Grot", "Nobz"),
     submitted = lubridate::as_datetime(experiment_end_time / 1000, 
                                        tz = "Europe/Berlin"),
     duration  = experiment_duration / 1000
   )
 
 data_post <- all_data %>% 
-  select(submitted, subj_id, condition, rules, blocked, age, duration, languages, strategy) %>% 
+  select(submitted, subj_id, condition, rules, 
+         blocked, age, duration, languages, strategy) %>% 
   distinct()
 
 dtrain <- all_data %>% 
   filter(!is.na(correct1)) %>% 
   mutate(
-    correct_item = ifelse(assignment == "correct1", correct1, correct2),
-    correct = response == correct_item
+    # correct_item = ifelse(assignment == "correct1", correct1, correct2),
+    correct = response_normalized == correct_normalized
   ) %>% 
   group_by(subj_id) %>% 
   mutate(
     trial = seq(1:96),
     block = rep(1:12, each = 8)
   ) %>% 
-  select(subj_id, condition, rules, blocked, 
-         trial, block, image, correct, response_time) %>% 
+  rename("response" = response_normalized) %>% 
+  select(subj_id, condition, rules, blocked, trial, 
+         block, image, correct, response, response_time) %>% 
   ungroup()
 
 # ich glaub, für dtrans und dprob braucht es jeweils das assignment nicht mehr
+# ...bzw. nach der normalisierung
 dtrans <- all_data %>% 
   filter(is.na(correct1), !is.na(response)) %>% 
   left_join(trial_transfer, by = "image") %>% 
@@ -91,18 +106,22 @@ dtrans <- all_data %>%
       TRUE ~ "training"
     ),
     extrapol = case_when(
-      item == "transfer" & ext_cat == response ~ 1,
+      item == "transfer" & response_normalized == "Grot" ~ 1,
       item == "transfer" ~ 0,
       TRUE ~ NA_real_),
-    correct_item = ifelse(assignment == "correct1", correct1.y, correct2.y),
     correct = case_when(
-      item == "training" & response == correct_item ~ TRUE,
-      item == "training" & response != correct_item ~ FALSE,
+      item == "training" & response_normalized == correct_normalized ~ TRUE,
+      # wenn != correct_normalized, ist NA doch auch FALSE? ist das wichtig...?
+      # vorher:
+      # item == "training" & response_normalized != correct_normalized ~ FALSE,
+      # alternativ:
+      item == "training" & !is.na(response_normalized) ~ FALSE,
       TRUE ~ NA
     )
   ) %>% 
-  select(subj_id, condition, rules, blocked, assignment, image, 
-         item, response, correct, extrapol, response_time, img_x, img_y)
+  select(subj_id, condition, rules, blocked, assignment, image, item, 
+         response_normalized, correct, extrapol, response_time, img_x, img_y) %>% 
+  rename("response" = response_normalized)
 
 dprob <- all_data %>% 
   filter(is.na(correct1), is.na(response)) %>% 

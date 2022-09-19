@@ -299,3 +299,45 @@ stimprob %>%
       fill = "Nobz") +
     scale_fill_viridis_c() +
     theme_transfer
+
+
+## some fun with probs & correlations n stuff
+stimprob %>% 
+  mutate(
+    unified = ifelse(assignment == "correct2", probA, probB),
+    prob_assign = case_when(
+      unified > 60 ~ "A",
+      unified < 40 ~ "B",
+      TRUE ~ "indecisive"
+    ),
+    pa_uni = case_when(
+      prob_assign == "A" & assignment == "correct2" ~ "Nobz",
+      prob_assign == "B" & assignment == "correct2" ~ "Grot",
+      prob_assign == "A" & assignment == "correct1" ~ "Grot",
+      prob_assign == "B" & assignment == "correct1" ~ "Nobz",
+      TRUE ~ prob_assign
+    )
+  ) %>% 
+  left_join(transfer, by = c("subj_id", "image")) %>% 
+  mutate(
+    samesies = case_when(
+      pa_uni == response ~ 1,
+      pa_uni == "indecisive" ~ 0.5,
+      pa_uni != response ~ 0
+    )
+  ) %>% 
+  filter(item == "training") %>% 
+  group_by(subj_id) %>% 
+  summarise(
+    m = mean(samesies)
+  ) %>% 
+  ggplot(aes(m)) + 
+    geom_histogram(binwidth = 0.02, fill = "#3c4c72", color = "#f0f0f0") +
+    labs(
+      y = "Anzahl", x = "Mean Accuracy of Learned Category",
+      caption = "Percentual agreement between categorical transfer responses 
+      and probability transfer responses; Items with a >60 (<40) probability 
+      rating were assigned to their respective label."
+    ) +
+    scale_x_continuous(labels = scales::percent_format(),
+                       breaks = scales::pretty_breaks())

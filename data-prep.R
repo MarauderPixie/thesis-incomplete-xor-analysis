@@ -4,14 +4,14 @@ source("magpie-credentials.R")
 library(httr)
 library(rvest)
 
-# n_total <- GET(
-#   "https://magpie.jemu.name/experiments",
-#   authenticate(user, pass)
-# ) |>
-#   content() |>
-#   html_node("tr:nth-child(3) td:nth-child(4)") |>
-#   html_text2() |>
-#   as.integer()
+n_total <- GET(
+  "https://magpie.jemu.name/experiments",
+  authenticate(user, pass)
+) |>
+  content() |>
+  html_node("tr:nth-child(3) td:nth-child(4)") |>
+  html_text2() |>
+  as.integer()
 
 
 ## trial data
@@ -118,7 +118,7 @@ dprob <- all_data %>%
     probB = prob,
   ) %>% 
   select(subj_id, condition, rules, blocked, assignment, image, 
-         probA, probB, response_time, img_x, img_y)
+         item, probA, probB, response_time, img_x, img_y)
 
 
 ## save to disk

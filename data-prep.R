@@ -89,10 +89,10 @@ dtrain <- all_data %>%
     trial = seq(1:96),
     block = rep(1:12, each = 8)
   ) %>% 
-  rename("response" = response_normalized) %>% 
-  select(subj_id, condition, rules, blocked, trial, 
-         block, image, correct, response, response_time) %>% 
-  ungroup()
+  select(subj_id, condition, rules, blocked, trial, block, image, 
+         correct_normalized, response, response_time) %>% 
+  ungroup() %>% 
+  rename("response" = response_normalized)
 
 # ich glaub, für dtrans und dprob braucht es jeweils das assignment nicht mehr
 # ...bzw. nach der normalisierung
@@ -109,6 +109,9 @@ dtrans <- all_data %>%
       item == "transfer" & response_normalized == "Grot" ~ 1,
       item == "transfer" ~ 0,
       TRUE ~ NA_real_),
+    # möglicherweise ergibt dieser block einfach auch nur sehr wenig sinn
+    # irgendwas mit "in all_data werden den gelernten items aus der transfer-
+    # phase keine korrektheitsvalues zugewiesen". =(
     correct = case_when(
       item == "training" & response_normalized == correct_normalized ~ TRUE,
       # wenn != correct_normalized, ist NA doch auch FALSE? ist das wichtig...?
@@ -119,8 +122,8 @@ dtrans <- all_data %>%
       TRUE ~ NA
     )
   ) %>% 
-  select(subj_id, condition, rules, blocked, assignment, image, item, 
-         response_normalized, correct, extrapol, response_time, img_x, img_y) %>% 
+  select(subj_id, condition, rules, blocked, assignment, image, 
+         item, response_normalized, correct, extrapol, response_time, img_x, img_y) %>% 
   rename("response" = response_normalized)
 
 dprob <- all_data %>% 

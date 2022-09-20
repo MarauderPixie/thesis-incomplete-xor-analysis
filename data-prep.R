@@ -14,7 +14,7 @@ n_total <- GET(
   as.integer()
 
 
-## trial data
+#### trial data ----
 # trial_blocked_shape <- read_csv("data-trials/training-blocked-shape.csv")
 # trial_blocked_size  <- read_csv("data-trials/training-blocked-size.csv")
 # trial_mixed         <- read_csv("data-trials/training-mixed.csv")
@@ -36,7 +36,7 @@ critical <- paste0(
                "e31_3167-366.7.jpg", "e30_3167-233.3.jpg", "e29_3167-100.jpg")
 )
 
-## experimental data
+#### all experimental data ----
 all_data <- GET(
   "https://magpie.jemu.name/experiments/7/retrieve",
   authenticate(user, pass)
@@ -45,6 +45,20 @@ all_data <- GET(
   read_csv() %>% 
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
   mutate(
+    phase = case_when(
+      !is.na(correct1) ~ "training",
+      is.na(correct1) & !is.na(response) ~ "transfer_cat",
+      is.na(correct1) & is.na(response) ~ "transfer_prob"
+    )
+  ) %>% 
+  select(-correct1, -correct2) %>% 
+  left_join(trial_transfer, by = "image") %>% 
+  mutate(
+    item = case_when(
+      image %in% critical ~ "transfer",
+      image %in% neutral ~ "neutral",
+      TRUE ~ "training"
+    ),
     correct_normalized = case_when(
       assignment == "correct2" & correct2 == "Nobz" ~ "Grot",
       assignment == "correct2" & correct2 == "Grot" ~ "Nobz",
@@ -65,85 +79,66 @@ all_data <- GET(
                           condition == 3 ~ "rules",
                           condition == 4 ~ "both") %>% 
       as_factor() %>% fct_relevel("control", "rules", "blocked"),
-    #### IMPORTANT - esp. further down the line! ####
-    # ain't ext_cat always "Grot" after normalizing?
-    # ext_cat   = ifelse(assignment == "correct1", "Grot", "Nobz"),
     submitted = lubridate::as_datetime(experiment_end_time / 1000, 
                                        tz = "Europe/Berlin"),
     duration  = experiment_duration / 1000
   )
 
+#### demographics ----
 data_post <- all_data %>% 
   select(submitted, subj_id, condition, rules, 
          blocked, age, duration, languages, strategy) %>% 
   distinct()
 
+#### training data ----
 dtrain <- all_data %>% 
-  filter(!is.na(correct1)) %>% 
-  mutate(
-    # correct_item = ifelse(assignment == "correct1", correct1, correct2),
-    correct = response_normalized == correct_normalized
-  ) %>% 
+  filter(phase == "training") %>% 
   group_by(subj_id) %>% 
   mutate(
-    trial = seq(1:96),
-    block = rep(1:12, each = 8)
+    correct = response_normalized == correct_normalized,
+    trial   = seq(1:96),
+    block   = rep(1:12, each = 8)
   ) %>% 
   select(subj_id, condition, rules, blocked, trial, block, image, 
-         correct_normalized, response, response_time) %>% 
+         response_normalized, response_time, correct) %>% 
   ungroup() %>% 
   rename("response" = response_normalized)
 
-# ich glaub, für dtrans und dprob braucht es jeweils das assignment nicht mehr
-# ...bzw. nach der normalisierung
+#### transfer data - categories ----
 dtrans <- all_data %>% 
-  filter(is.na(correct1), !is.na(response)) %>% 
-  left_join(trial_transfer, by = "image") %>% 
+  filter(phase == "transfer_cat") %>% 
   mutate(
-    item = case_when(
-      image %in% critical ~ "transfer",
-      image %in% neutral ~ "neutral",
-      TRUE ~ "training"
-    ),
-    extrapol = case_when(
+    extrapolation = case_when(
       item == "transfer" & response_normalized == "Grot" ~ 1,
       item == "transfer" ~ 0,
       TRUE ~ NA_real_),
-    # möglicherweise ergibt dieser block einfach auch nur sehr wenig sinn
-    # irgendwas mit "in all_data werden den gelernten items aus der transfer-
-    # phase keine korrektheitsvalues zugewiesen". =(
     correct = case_when(
+      # leicht widersprüchlich zum modell:
+      # wenn die generalisierung schmaler oder breiter ist, sind auch
+      # die gelernten kategorien kleiner oder größer, ergo müsste man
+      # vllt was machen, was die "korrektheit" entsprechend anpasst
       item == "training" & response_normalized == correct_normalized ~ TRUE,
-      # wenn != correct_normalized, ist NA doch auch FALSE? ist das wichtig...?
-      # vorher:
-      # item == "training" & response_normalized != correct_normalized ~ FALSE,
-      # alternativ:
-      item == "training" & !is.na(response_normalized) ~ FALSE,
+      item == "training" & response_normalized != correct_normalized ~ FALSE,
       TRUE ~ NA
     )
   ) %>% 
-  select(subj_id, condition, rules, blocked, assignment, image, 
-         item, response_normalized, correct, extrapol, response_time, img_x, img_y) %>% 
+  select(subj_id, condition, rules, blocked, image, item, img_x, img_y, 
+         response_normalized, response_time, correct, extrapolation) %>% 
   rename("response" = response_normalized)
 
+#### transfer data - probabilities ----
 dprob <- all_data %>% 
-  filter(is.na(correct1), is.na(response)) %>% 
-  left_join(trial_transfer, by = "image") %>% 
+  filter(phase == "transfer_prob") %>% 
   mutate(
-    prob = ifelse(is.na(prob), 50, prob),
-    item = case_when(
-      image %in% critical ~ "transfer",
-      image %in% neutral ~ "neutral",
-      TRUE ~ "training"
-    ),
+    prob  = ifelse(is.na(prob), 50, prob),
     probA = 100 - prob,
     probB = prob,
   ) %>% 
-  select(subj_id, condition, rules, blocked, assignment, image, 
-         item, probA, probB, response_time, img_x, img_y)
+  select(subj_id, condition, rules, blocked, image, item, img_x, img_y, 
+         probA, probB, response_time)
 
 
-## save to disk
+#### save to disk & cleanup ----
 # to-do: die ganzen type-casts gehen natürlcih wieder verloren hier m)
 # write_csv(data_post, "data-clean/demographics.csv")
 # write_csv(dtrain,    "data-clean/trials-training.csv")

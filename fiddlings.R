@@ -175,7 +175,7 @@ training %>%
 transfer %>% 
   filter(item == "transfer") %>% 
   group_by(subj_id) %>% 
-  summarise(ext = sum(extrapol)) %>% 
+  summarise(ext = sum(extrapolation)) %>% 
   ggplot(aes(ext)) +
   geom_histogram(fill = "#3c4c72", color = "#f0f0f0", binwidth = 1) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 9))
@@ -193,14 +193,11 @@ transfer %>%
   mutate(
     k_nobz = ifelse(response == "Nobz", 1, 0)
   ) %>%
-  group_by(condition, assignment, img_x, img_y) %>% 
+  group_by(condition, img_x, img_y) %>% 
   summarise(
     p_nobz = mean(k_nobz)
   ) %>% 
-  mutate(
-    p_all = ifelse(assignment == "correct1", 1 - p_nobz, p_nobz)
-  ) %>% 
-  ggplot(aes(img_x, img_y, fill = p_all)) +
+  ggplot(aes(img_x, img_y, fill = p_nobz)) +
     facet_wrap(~condition, nrow = 2) +
     geom_tile(color = "#F0F0F0", size = 1) +
     geom_label(data = cat_labs, aes(label = categ, fill = NULL), color = "black") +
@@ -217,13 +214,13 @@ transfer %>%
   mutate(
     nobz = ifelse(response == "Nobz", 1, 0)
   ) %>% 
-  group_by(condition, assignment, img_x, img_y) %>% 
+  group_by(condition, img_x, img_y) %>% 
   summarise(
     p = mean(nobz)
   ) %>% 
   ungroup() %>% 
   ggplot(aes(img_x, img_y, fill = p)) +
-    facet_grid(assignment ~ condition) +
+    facet_grid(~condition) +
     geom_tile(color = "#F0F0F0", size = .5) +
     labs(fill = "Nobz") +
     scale_fill_viridis_c() +
@@ -248,8 +245,8 @@ catype <- transfer %>%
   filter(item == "transfer") %>% 
   group_by(subj_id, condition) %>% 
   summarise(
-    k = sum(extrapol),
-    type = ifelse(k > 5, "extra", "proxy")
+    k = sum(extrapolation),
+    type = ifelse(k > 4, "extra", "proxy")
   )
 
 table(catype$condition, catype$type)
@@ -279,12 +276,9 @@ ggplot(acc_corr, aes(training, transfer)) +
 
 ## probabilities
 stimprob %>%  
-  mutate(
-    unified = ifelse(assignment == "correct2", probA, probB)
-  ) %>% 
   group_by(img_x, img_y) %>% 
   summarise(
-    p = mean(unified)
+    p = mean(probA)
   ) %>% 
   ungroup() %>% 
   ggplot(aes(img_x, img_y, fill = p)) +

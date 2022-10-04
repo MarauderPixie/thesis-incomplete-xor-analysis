@@ -185,23 +185,29 @@ transfer %>%
 cat_labs <- tibble(
   img_x = c(1, 1, 2, 2, 6, 7),
   img_y = c(1, 7, 2, 6, 6, 7),
-  categ = c("Grot", "Nobz", "Grot", 
-            "Nobz", "Grot", "Grot")
+  categ = c("Nobz", "Grot", "Nobz", 
+            "Grot", "Nobz", "Nobz")
 )
 
 transfer %>% 
   mutate(
-    k_nobz = ifelse(response == "Nobz", 1, 0)
+    k_nobz = ifelse(response == "Grot", 1, 0)
   ) %>%
-  group_by(condition, img_x, img_y) %>% 
+  group_by(subj_id) %>% 
+  mutate(
+    extraprox = ifelse(sum(extrapolation, na.rm = T) > 4, 
+                       "extra", "proxy")
+  ) %>% 
+  ungroup() %>% 
+  group_by(extraprox, condition, img_x, img_y) %>% 
   summarise(
     p_nobz = mean(k_nobz)
   ) %>% 
   ggplot(aes(img_x, img_y, fill = p_nobz)) +
-    facet_wrap(~condition, nrow = 2) +
+    facet_wrap(extraprox~condition, nrow = 2) +
     geom_tile(color = "#F0F0F0", size = 1) +
     geom_label(data = cat_labs, aes(label = categ, fill = NULL), color = "black") +
-    labs(fill = "Nobz") +
+    labs(fill = "Grot") +
     scale_fill_viridis_c() + 
     theme_void(12) +
     theme(legend.text = element_blank())
@@ -335,3 +341,32 @@ stimprob %>%
     ) +
     scale_x_continuous(labels = scales::percent_format(),
                        breaks = scales::pretty_breaks())
+
+
+
+#### THIS IS A FINDING!! I guess... ---
+# This plot may show that extrapolators tend to default on Grot!
+# Like, their mean_grot_percentage is way higher overall, not just
+# on the previously untrained category
+transfer %>% 
+  mutate(
+    k_nobz = ifelse(response == "Grot", 1, 0)
+  ) %>%
+  group_by(subj_id) %>% 
+  mutate(
+    extraprox = ifelse(sum(extrapolation, na.rm = T) > 4, 
+                       "extra", "proxy")
+  ) %>% 
+  ungroup() %>% 
+  group_by(extraprox, img_x, img_y) %>% 
+  summarise(
+    p_nobz = mean(k_nobz)
+  ) %>% 
+  ggplot(aes(img_x, img_y, fill = p_nobz)) +
+    facet_wrap(~extraprox, nrow = 1) +
+    geom_tile(color = "#F0F0F0", size = 1) +
+    geom_label(data = cat_labs, aes(label = categ, fill = NULL), color = "black") +
+    labs(fill = "Grot") +
+    scale_fill_viridis_c() + 
+    theme_void(12) +
+    theme(legend.text = element_blank())

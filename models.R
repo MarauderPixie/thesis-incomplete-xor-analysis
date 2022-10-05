@@ -39,11 +39,33 @@ priors5 <- c(
 )
 
 #### Models ----
+incomplete_items <- filter(transfer, item == "transfer")
+
+null_model <- brm(
+  data = incomplete_items,
+  extrapolation ~ 1 + (1 | subj_id),
+  cores = ncore, iter = 10000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+## full-sih model
+h1 <- brm(
+  data = incomplete_items,
+  extrapolation ~ rules * blocked + (rules * blocked | subj_id),
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
+  save_pars = save_pars(all = TRUE)
+)
+
+saveRDS(h1, "models/h1_fullish.rds")
+
+
 h21 <- brm(
   data = training,
   correct ~ blocked * block + (1 + image | subj_id),
   family = bernoulli(), prior = priors5,
-  cores = ncore, iter = 4000, warmup = 1000,
+  cores = ncore, iter = 10000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )

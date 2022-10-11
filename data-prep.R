@@ -130,12 +130,14 @@ dtrans <- all_data %>%
 dprob <- all_data %>% 
   filter(phase == "transfer_prob") %>% 
   mutate(
-    prob  = ifelse(is.na(prob), 50, prob),
-    probA = 100 - prob,
-    probB = prob,
+    probN  = ifelse(is.na(prob), 50, prob),
+    probA = 100 - probN,
+    probB = probN,
+    prob  = ifelse(assignment == "correct2", probA, probB)
   ) %>% 
   select(subj_id, condition, rules, blocked, image, item, img_x, img_y, 
-         probA, probB, response_time)
+         # probA, probB, 
+         prob, response_time)
 
 
 #### save to disk & cleanup ----

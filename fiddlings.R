@@ -281,14 +281,27 @@ ggplot(acc_corr, aes(training, transfer)) +
 
 
 ## probabilities
-stimprob %>%  
-  group_by(img_x, img_y) %>% 
+exin <- transfer %>% 
+  mutate(
+    k_nobz = ifelse(response == "Grot", 1, 0)
+  ) %>%
+  group_by(subj_id) %>% 
+  mutate(
+    extraprox = ifelse(sum(extrapolation, na.rm = T) > 4, 
+                       "extra", "proxy")
+  ) %>% 
+  ungroup()
+
+stimprob %>%
+  select(-img_x, -img_y) %>% 
+  left_join(exin, by = c("subj_id", "image")) %>% 
+  group_by(img_x, img_y, extraprox) %>% 
   summarise(
-    p = mean(probA)
+    p = mean(prob)
   ) %>% 
   ungroup() %>% 
   ggplot(aes(img_x, img_y, fill = p)) +
-    # facet_grid(assignment ~ condition) +
+    facet_grid(~ extraprox) +
     geom_tile(color = "#F0F0F0", size = .5) +
     geom_label(
       # data = cat_labs, aes(label = categ, fill = NULL), 
@@ -296,9 +309,45 @@ stimprob %>%
       color = "black", fill = "#F0F0F0") +
     labs(
       subtitle = "Wahrscheinlichkeitsschätzung der Kategorienzugehörigkeit",
-      fill = "Nobz") +
+      fill = "Grot") +
     scale_fill_viridis_c() +
     theme_transfer
+
+
+stimprob %>%
+  select(-img_x, -img_y) %>% 
+  left_join(exin, by = c("subj_id", "image")) %>% 
+  filter(extraprox == "extra") %>% 
+  ggplot(aes(prob)) +
+    facet_grid(cols = vars(img_x), 
+               rows = vars(img_y),
+               as.table = F) +
+    geom_histogram(fill = "#3c4c72", color = "#f0f0f0", bins = 11) +
+    labs(
+      subtitle = "Wahrscheinlichkeitsschätzung der Kategorienzugehörigkeit",
+      # fill = "Grot"
+    ) +
+    scale_fill_viridis_c() +
+    theme_transfer +
+    theme(panel.spacing = unit(5, "pt"))
+
+stimprob %>%
+  select(-img_x, -img_y) %>% 
+  left_join(exin, by = c("subj_id", "image")) %>% 
+  filter(extraprox == "proxy") %>% 
+  ggplot(aes(prob)) +
+    facet_grid(cols = vars(img_x), 
+               rows = vars(img_y),
+               as.table = F) +
+    geom_histogram(fill = "#3c4c72", color = "#f0f0f0", binwidth = 5) +
+    labs(
+      subtitle = "Wahrscheinlichkeitsschätzung der Kategorienzugehörigkeit",
+      # fill = "Grot"
+    ) +
+    scale_fill_viridis_c() +
+    theme_transfer +
+    theme(panel.spacing = unit(5, "pt"))
+
 
 
 ## some fun with probs & correlations n stuff

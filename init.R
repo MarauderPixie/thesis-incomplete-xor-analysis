@@ -1,6 +1,6 @@
 library(tidyverse)
 library(gghalves)
-# library(brms)
+library(brms)
 # library(bayesplot)
 # library(loo)
 

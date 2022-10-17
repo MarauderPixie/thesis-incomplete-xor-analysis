@@ -38,43 +38,57 @@ priors5 <- c(
   set_prior("normal(0, 0.5)", class = "b")
 )
 
+prereg_prior <- c(
+  set_prior("student_t(5, 0, 2.5)", class = "Intercept"), 
+  set_prior("student_t(5, 0, 2.5)", class = "sd"), 
+  set_prior("student_t(5, 0, 2.5)", class = "b")
+)
+
 #### Models ----
 incomplete_items <- filter(transfer, item == "transfer")
 
 null_model <- brm(
   data = incomplete_items,
-  extrapolation ~ 1 + (1 | subj_id),
-  cores = ncore, iter = 10000, warmup = 2000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-
-## full-sih model
-h1 <- brm(
-  data = incomplete_items,
-  extrapolation ~ rules * blocked + (rules * blocked | subj_id),
+  extrapolation ~ 1 + (rules * condition | subj_id),
+  family = bernoulli(), 
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
 )
 
-saveRDS(h1, "models/h1_fullish.rds")
+saveRDS(null_model, "models/h1_null_full.rds")
 
-
-h21 <- brm(
-  data = training,
-  correct ~ blocked * block + (1 + image | subj_id),
-  family = bernoulli(), prior = priors5,
-  cores = ncore, iter = 10000, warmup = 2000,
-  control = list(adapt_delta = 0.9),
+## full-ish model
+h1_rules <- brm(
+  data = incomplete_items,
+  extrapolation ~ rules + (rules * condition | subj_id),
+  family = bernoulli(), prior = prereg_prior,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
 )
 
-h22 <- brm(
-  data = training,
-  correct ~ rules * num_block + (1 + image | subj) + (1 + subj | image),
-  family = bernoulli(), # prior = priors5,
-  cores = ncore, iter = 10000, warmup = 2000,
-  control = list(adapt_delta = 0.9),
+saveRDS(h1_rules, "models/h1_rules_full.rds")
+
+
+h1_blocked <- brm(
+  data = incomplete_items,
+  extrapolation ~ blocked + (blocked * condition | subj_id),
+  family = bernoulli(), prior = prereg_prior,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
 )
+
+saveRDS(h1_blocked, "models/h1_blocked_full.rds")
+
+h1_both <- brm(
+  data = incomplete_items,
+  extrapolation ~ rules * blocked + (rules * blocked | subj_id),
+  family = bernoulli(), prior = pr_prior,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
+  save_pars = save_pars(all = TRUE)
+)
+
+saveRDS(h1_both, "models/h1_both_full.rds")

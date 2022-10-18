@@ -45,50 +45,62 @@ prereg_prior <- c(
 )
 
 #### Models ----
-incomplete_items <- filter(transfer, item == "transfer")
+extra_all     <- filter(transfer, item == "transfer")
+extra_rules   <- filter(extra_all, condition %in% c("control", "rules"))
+extra_blocked <- filter(extra_all, condition %in% c("control", "blocked"))
 
-null_model <- brm(
-  data = incomplete_items,
-  extrapolation ~ 1 + (rules * condition | subj_id),
-  family = bernoulli(), 
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.99),
-  save_pars = save_pars(all = TRUE)
-)
-
-saveRDS(null_model, "models/h1_null_full.rds")
-
-## full-ish model
-h1_rules <- brm(
-  data = incomplete_items,
-  extrapolation ~ rules + (rules * condition | subj_id),
+## H1.1: effect of mentioning rules
+# h1_rules_null1 <- brm(
+#   data = extra_rules,
+#   extrapolation ~ 1 + (rules | subj_id),
+#   family = bernoulli(), prior = prereg_prior,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.99),
+#   save_pars = save_pars(all = TRUE)
+# )
+h1_rules_null2 <- brm(
+  data = extra_rules,
+  extrapolation ~ 1 + (rules || subj_id),
   family = bernoulli(), prior = prereg_prior,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
 )
 
-saveRDS(h1_rules, "models/h1_rules_full.rds")
+saveRDS(h1_rules_null2, "models/h1_null_nocorr.rds")
 
-
-h1_blocked <- brm(
-  data = incomplete_items,
-  extrapolation ~ blocked + (blocked * condition | subj_id),
+## H1.2: Effect of blocked rule
+# h1_blocked1 <- brm(
+#   data = extra_blocked,
+#   extrapolation ~ blocked + (blocked | subj_id),
+#   family = bernoulli(), prior = prereg_prior,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.99),
+#   save_pars = save_pars(all = TRUE)
+# )
+h1_blocked2 <- brm(
+  data = extra_blocked,
+  extrapolation ~ blocked + (blocked || subj_id),
   family = bernoulli(), prior = prereg_prior,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
 )
 
-saveRDS(h1_blocked, "models/h1_blocked_full.rds")
+saveRDS(h1_blocked2, "models/h1_blocked_nocorr.rds")
 
-h1_both <- brm(
-  data = incomplete_items,
-  extrapolation ~ rules * blocked + (rules * blocked | subj_id),
-  family = bernoulli(), prior = pr_prior,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.99),
-  save_pars = save_pars(all = TRUE)
-)
 
-saveRDS(h1_both, "models/h1_both_full.rds")
+
+
+# h1_both <- brm(
+#   data = extra_all,
+#   extrapolation ~ rules * blocked + (rules * blocked | subj_id),
+#   family = bernoulli(), prior = pr_prior,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.99),
+#   save_pars = save_pars(all = TRUE)
+# )
+# saveRDS(h1_both, "models/h1_both_full.rds")
+
+#### Bayes Factors
+bayes_factor(h1_rules2, h1_rules_null2)

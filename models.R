@@ -1,13 +1,10 @@
 source("init.R")
 
 #### Read & prepare data ----
-# demo <- read_csv("data-clean/demographics.csv")
-# training <- read_csv("data-clean/trials-training.csv")
-# transfer <- read_csv("data-clean/trials-transfer.csv")
-demo <- readRDS("data-clean/demographics.rds")
+# demo <- readRDS("data-clean/demographics.rds")
 training <- readRDS("data-clean/trials-training.rds")
 transfer <- readRDS("data-clean/trials-transfer.rds")
-stimprob <- readRDS("data-clean/trials-probability.rds")
+# stimprob <- readRDS("data-clean/trials-probability.rds")
 
 exctest <- training %>% 
   filter(block > 9) %>% 
@@ -19,17 +16,17 @@ exctest <- training %>%
   ) %>% 
   filter(p < .7)
 
-demo <- demo %>% 
-  filter(!(subj_id %in% exctest$subj_id))
+# demo <- demo %>% 
+#   filter(!(subj_id %in% exctest$subj_id))
 training <- training %>% 
   filter(!(subj_id %in% exctest$subj_id))
 transfer <- transfer %>% 
   filter(!(subj_id %in% exctest$subj_id))
-stimprob <- stimprob %>% 
-  filter(!(subj_id %in% exctest$subj_id))
+# stimprob <- stimprob %>% 
+#   filter(!(subj_id %in% exctest$subj_id))
 
-rm(training, exctest)
-
+extra_all <- filter(transfer, item == "transfer")
+rm(training, transfer, exctest)
 
 #### Priors ----
 # get_prior(correct ~ blocked * block + (1 + image | subj_id),
@@ -40,14 +37,17 @@ rm(training, exctest)
 #   set_prior("normal(0, 0.5)", class = "b")
 # )
 
-prereg_prior <- c(
+prior_null <- c(
+  set_prior("student_t(5, 0, 2.5)", class = "Intercept"), 
+  set_prior("student_t(5, 0, 2.5)", class = "sd")
+)
+prior_effect <- c(
   set_prior("student_t(5, 0, 2.5)", class = "Intercept"), 
   set_prior("student_t(5, 0, 2.5)", class = "sd"), 
   set_prior("student_t(5, 0, 2.5)", class = "b")
 )
 
-#### Models ----
-extra_all     <- filter(transfer, item == "transfer")
+#### Models on subsets ----
 extra_rules   <- filter(extra_all, condition %in% c("control", "rules"))
 extra_blocked <- filter(extra_all, condition %in% c("control", "blocked"))
 
@@ -55,7 +55,7 @@ extra_blocked <- filter(extra_all, condition %in% c("control", "blocked"))
 # h1_rules_null1 <- brm(
 #   data = extra_rules,
 #   extrapolation ~ 1 + (rules | subj_id),
-#   family = bernoulli(), prior = prereg_prior,
+#   family = bernoulli(), prior = prior_effect,
 #   cores = ncore, iter = 20000, warmup = 4000,
 #   control = list(adapt_delta = 0.99),
 #   save_pars = save_pars(all = TRUE)
@@ -63,7 +63,7 @@ extra_blocked <- filter(extra_all, condition %in% c("control", "blocked"))
 h1_rules_null2 <- brm(
   data = extra_rules,
   extrapolation ~ 1 + (rules || subj_id),
-  family = bernoulli(), # prior = prereg_prior, # would I actually apply a prior to the null model?
+  family = bernoulli(), # prior = prior_effect, # would I actually apply a prior to the null model?
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -71,7 +71,7 @@ h1_rules_null2 <- brm(
 h1_rules <- brm(
   data = extra_rules,
   extrapolation ~ rules + (rules || subj_id),
-  family = bernoulli(), prior = prereg_prior, 
+  family = bernoulli(), prior = prior_effect, 
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -84,7 +84,7 @@ saveRDS(h1_rules, "models/h1_rules_nocorr.rds")
 # h1_blocked1 <- brm(
 #   data = extra_blocked,
 #   extrapolation ~ blocked + (blocked | subj_id),
-#   family = bernoulli(), prior = prereg_prior,
+#   family = bernoulli(), prior = prior_effect,
 #   cores = ncore, iter = 20000, warmup = 4000,
 #   control = list(adapt_delta = 0.99),
 #   save_pars = save_pars(all = TRUE)
@@ -92,7 +92,7 @@ saveRDS(h1_rules, "models/h1_rules_nocorr.rds")
 h1_blocked_null2 <- brm(
   data = extra_blocked,
   extrapolation ~ 1 + (blocked || subj_id),
-  family = bernoulli(), # prior = prereg_prior, 
+  family = bernoulli(), # prior = prior_effect, 
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -100,7 +100,7 @@ h1_blocked_null2 <- brm(
 h1_blocked2 <- brm(
   data = extra_blocked,
   extrapolation ~ blocked + (blocked || subj_id),
-  family = bernoulli(), prior = prereg_prior,
+  family = bernoulli(), prior = prior_effect,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -114,7 +114,7 @@ saveRDS(h1_blocked2, "models/h1_blocked_nocorr.rds")
 h1_both_null1 <- brm(
   data = extra_all,
   extrapolation ~ 1 + (rules * blocked || subj_id),
-  family = bernoulli(), # prior = prereg_prior,
+  family = bernoulli(), # prior = prior_effect,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -122,7 +122,7 @@ h1_both_null1 <- brm(
 h1_both1 <- brm(
   data = extra_all,
   extrapolation ~ rules * blocked + (rules * blocked || subj_id),
-  family = bernoulli(), prior = prereg_prior,
+  family = bernoulli(), prior = prior_effect,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -137,7 +137,7 @@ extra_both <- filter(extra_all, condition %in% c("control", "both"))
 h1_both_null2 <- brm(
   data = extra_both,
   extrapolation ~ 1 + (condition || subj_id),
-  family = bernoulli(), # prior = prereg_prior,
+  family = bernoulli(), # prior = prior_effect,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -145,7 +145,7 @@ h1_both_null2 <- brm(
 h1_both2 <- brm(
   data = extra_both,
   extrapolation ~ condition + (condition || subj_id),
-  family = bernoulli(), prior = prereg_prior,
+  family = bernoulli(), prior = prior_effect,
   cores = ncore, iter = 20000, warmup = 4000,
   control = list(adapt_delta = 0.99),
   save_pars = save_pars(all = TRUE)
@@ -174,42 +174,139 @@ saveRDS(m2, "models/h13_m2.rds")
 saveRDS(m3, "models/h13_m3.rds")
 
 
+
+#### Models on full data ----
+h1_null <- brm(
+  data = extra_all,
+  extrapolation ~ 1 + (rules * blocked || subj_id) + (rules * blocked || image),
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_null, "models/h1_null_fullish.rds")
+# thing is, tho: rules and blocked conditions do not 
+# "vary with the levels of the grouping factor given in group (that is: subj_id)" 
+# -- Buerkner 2017, brms paper
+#
+# on the other hand tho:
+# "In the present example, only one random term is specified in which (1 + age) are the random
+#  effects and the grouping factor is patient. This implies that the intercept of the model as
+#  well as the effect of age is supposed to vary between patients."
+# -> the effect of rules and blocked may well be varying between subjects,
+#    I'm not too sure about the images, tho...
+#    sd-CIs are _really_ close to 0 too :x
+
+# less REs
+h1_null_min <- brm(
+  data = extra_all,
+  extrapolation ~ 1 + (1 | subj_id) + (1 | image),
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.99),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_null_min, "models/h1_null_min.rds")
+
+
+## H1.1: Rules
+h1_rules <- brm(
+  data = extra_all,
+  extrapolation ~ rules + (rules * blocked || subj_id) + (rules * blocked || image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+# -> 3 divergent transitions; probably not a problem
+saveRDS(h1_rules, "models/h1_rules_fullish.rds")
+
+h1_rules_min <- brm(
+  data = extra_all,
+  extrapolation ~ rules + (1 | subj_id) + (1 | image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_rules_min, "models/h1_rules_min.rds")
+
+
+## H1.2: Blocked
+h1_blocked <- brm(
+  data = extra_all,
+  extrapolation ~ blocked + (rules * blocked || subj_id) + (rules * blocked || image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+# -> 1 divergent transition; probably not a problem
+saveRDS(h1_blocked, "models/h1_blocked_fullish.rds")
+
+h1_blocked_min <- brm(
+  data = extra_all,
+  extrapolation ~ blocked + (1 | subj_id) + (1 | image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_blocked_min, "models/h1_blocked_min.rds")
+
+
+## H1.3: Both & Interaction
+h1_both <- brm(
+  data = extra_all,
+  extrapolation ~ rules * blocked + (rules * blocked || subj_id) + (rules * blocked || image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+# -> 220 divergent transitions with adapt_delta = 0.9 O_O
+#    looks definitely problematic when looking at the plots
+
+h1_both_min <- brm(
+  data = extra_all,
+  extrapolation ~ rules * blocked + (1 | subj_id) + (1 | image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_both_min, "models/h1_both_min.rds")
+
+
+
+#### Model Diagnostics ----
+rstan::check_divergences(h1_null$fit)
+rstan::check_divergences(h1_rules$fit)
+rstan::check_divergences(h1_blocked$fit)
+rstan::check_divergences(h1_both$fit)
+
+# bayes_factor(h1_null_min, h1_null)
+# bayes_factor(h1_rules_min, h1_rules)
+# bayes_factor(h1_blocked_min, h1_blocked)
+# bayes_factor(h1_both_min, h1_both)
+# # -> all BFs are at least >60 in favor of the simpler models
+
 #### Bayes Factors ----
-rm(demo, extra_all, extra_blocked, extra_both,
-   extra_rules, prereg_prior, stimprob, transfer)
+h1_null    <- readRDS("models/h1_null_min.rds")
+h1_rules   <- readRDS("models/h1_rules_min.rds")
+h1_blocked <- readRDS("models/h1_blocked_min.rds")
+h1_both    <- readRDS("models/h1_both_min.rds")
 
-# bayes_factor(h1_both2, h1_both1) # uh-oh...
+# H1.1: rules
+bayes_factor(h1_rules, h1_null)
 
-## H1.1
-h1_null_rules <- readRDS("models/h1_rules_null_nocorr.rds")
-h1_rules <- readRDS("models/h1_rules_nocorr.rds")
+# H1.2: blocked
+bayes_factor(h1_blocked, h1_null)
 
-bayes_factor(h1_rules, h1_null_rules)
-
-
-## H1.2
-h1_null_blocked <- readRDS("models/h1_blocked_null_nocorr.rds")
-h1_blocked <- readRDS("models/h1_blocked_nocorr.rds")
-
-bayes_factor(h1_blocked, h1_null_blocked)
+# H1.3: both
+bayes_factor(h1_both, h1_blocked)
+bayes_factor(h1_both, h1_rules)
+bayes_factor(h1_both, h1_null)
 
 
-## H1.3
-# on the subset
-h1_both_null_subset <- readRDS("models/h1_both_null_nocorr_subset.rds")
-h1_both_subset <- readRDS("models/h1_both_nocorr_subset.rds")
 
-bayes_factor(h1_both_subset, h1_rules)
-bayes_factor(h1_both_subset, h1_blocked)
-bayes_factor(h1_both_subset, h1_both_null_subset)
-
-# on the full data / updated models
-h13_both_null_full <- readRDS("models/h1_both_null_nocorr_full.rds")
-h13_rules   <- readRDS("models/h13_m1.rds")
-h13_blocked <- readRDS("models/h13_m2.rds")
-h13_both    <- readRDS("models/h13_m3.rds")
-# h1_both_full <- readRDS("models/h1_both_nocorr_full.rds")
-
-bayes_factor(h13_both, h13_rules)
-bayes_factor(h13_both, h13_blocked)
-bayes_factor(h13_both, h13_both_null_full)

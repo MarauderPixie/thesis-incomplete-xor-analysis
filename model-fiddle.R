@@ -117,3 +117,8 @@ rstan::check_divergences(expo_both$fit)
 #### Bayes Factors ----
 bayesfactor_models(expo_null, expo_rules, 
                    expo_blocked, expo_both)
+
+
+#### Going (A)NOVA! ----
+library(afex)
+fit1 <- aov_4(k ~ rules * blocked + (1|subj_id), data = extra_binom)

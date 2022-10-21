@@ -38,13 +38,13 @@ rm(training, transfer, exctest)
 # )
 
 prior_null <- c(
-  set_prior("student_t(5, 0, 2.5)", class = "Intercept"), 
-  set_prior("student_t(5, 0, 2.5)", class = "sd")
+  set_prior("student_t(5, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(5, 0, 1)", class = "sd")
 )
 prior_effect <- c(
-  set_prior("student_t(5, 0, 2.5)", class = "Intercept"), 
-  set_prior("student_t(5, 0, 2.5)", class = "sd"), 
-  set_prior("student_t(5, 0, 2.5)", class = "b")
+  set_prior("student_t(5, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(5, 0, 1)", class = "sd"), 
+  set_prior("student_t(5, 0, 1)", class = "b")
 )
 
 #### Models on subsets ----
@@ -200,10 +200,10 @@ saveRDS(h1_null, "models/h1_null_fullish.rds")
 # less REs
 h1_null_min <- brm(
   data = extra_all,
-  extrapolation ~ 1 + (1 | subj_id) + (1 | image),
+  extrapolation ~ 1 + (1 | subj_id), # + (1 | image),
   family = bernoulli(), prior = prior_null,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.99),
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
 saveRDS(h1_null_min, "models/h1_null_min.rds")
@@ -223,9 +223,9 @@ saveRDS(h1_rules, "models/h1_rules_fullish.rds")
 
 h1_rules_min <- brm(
   data = extra_all,
-  extrapolation ~ rules + (1 | subj_id) + (1 | image),
+  extrapolation ~ rules + (1 | subj_id), # + (1 | image),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup =2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
@@ -246,9 +246,9 @@ saveRDS(h1_blocked, "models/h1_blocked_fullish.rds")
 
 h1_blocked_min <- brm(
   data = extra_all,
-  extrapolation ~ blocked + (1 | subj_id) + (1 | image),
+  extrapolation ~ blocked + (1 | subj_id), # + (1 | image),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
@@ -269,9 +269,9 @@ h1_both <- brm(
 
 h1_both_min <- brm(
   data = extra_all,
-  extrapolation ~ rules * blocked + (1 | subj_id) + (1 | image),
+  extrapolation ~ rules * blocked + (1 | subj_id), # + (1 | image),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
@@ -280,10 +280,22 @@ saveRDS(h1_both_min, "models/h1_both_min.rds")
 
 
 #### Model Diagnostics ----
+h1_null    <- readRDS("models/h1_null_min.rds")
+h1_rules   <- readRDS("models/h1_rules_min.rds")
+h1_blocked <- readRDS("models/h1_blocked_min.rds")
+h1_both    <- readRDS("models/h1_both_min.rds")
+
 rstan::check_divergences(h1_null$fit)
 rstan::check_divergences(h1_rules$fit)
 rstan::check_divergences(h1_blocked$fit)
 rstan::check_divergences(h1_both$fit)
+
+plot(h1_null)
+plot(h1_rules)
+plot(h1_blocked)
+plot(h1_both)
+
+## TO-DO: prior predictive thingy vs. posterior predictive? Oder so?
 
 # bayes_factor(h1_null_min, h1_null)
 # bayes_factor(h1_rules_min, h1_rules)
@@ -292,21 +304,40 @@ rstan::check_divergences(h1_both$fit)
 # # -> all BFs are at least >60 in favor of the simpler models
 
 #### Bayes Factors ----
-h1_null    <- readRDS("models/h1_null_min.rds")
-h1_rules   <- readRDS("models/h1_rules_min.rds")
-h1_blocked <- readRDS("models/h1_blocked_min.rds")
-h1_both    <- readRDS("models/h1_both_min.rds")
-
 # H1.1: rules
 bayes_factor(h1_rules, h1_null)
+# -> h1_rules over h1_null: 0.42174
 
 # H1.2: blocked
 bayes_factor(h1_blocked, h1_null)
+# -> h1_blocked over h1_null: 1.13209
 
 # H1.3: both
 bayes_factor(h1_both, h1_blocked)
+# ->  h1_both over h1_blocked: 0.25175
 bayes_factor(h1_both, h1_rules)
+# -> h1_both over h1_rules: 0.59586
 bayes_factor(h1_both, h1_null)
+# -> h1_both over h1_null: 0.26733
 
 
 
+#### H2 ----
+h2_data <- training %>% 
+  filter(condition %in% c("control", "rules")) %>% 
+  mutate(
+    condition = droplevels(condition)
+  ) 
+  # group_by(subj_id, rules, block) %>% 
+  # summarize(
+  #   mean_correct = mean(correct)
+  # ) %>%  ungroup()
+
+h2_null <- brm(
+  data = h2_data,
+  correct ~ 1 + (1|subj_id + block),
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)

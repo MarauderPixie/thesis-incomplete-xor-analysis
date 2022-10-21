@@ -5,7 +5,8 @@ extra_binom <- extra_all %>%
   group_by(subj_id, rules, blocked) %>% 
   summarize(
     k = sum(extrapolation),
-    n = n()
+    n = n(),
+    p = k / n
   ) %>% 
   ungroup() %>% 
   mutate(
@@ -121,4 +122,5 @@ bayesfactor_models(expo_null, expo_rules,
 
 #### Going (A)NOVA! ----
 library(afex)
-fit1 <- aov_4(k ~ rules * blocked + (1|subj_id), data = extra_binom)
+fit1 <- aov_4(k ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
+fit2 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()

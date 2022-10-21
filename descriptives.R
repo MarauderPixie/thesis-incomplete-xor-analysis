@@ -4,7 +4,8 @@ extra_tbl <- extra_all %>%
   group_by(subj_id, condition) %>% 
   summarise(
     k = sum(extrapolation),
-    n = n()
+    n = n(),
+    p = k / n
   ) %>% 
   ungroup() %>% 
   mutate(
@@ -16,5 +17,12 @@ extra_tbl <- extra_all %>%
 tbl2 <- extra_tbl %>% 
   gather(cutoff, n, starts_with("exab")) %>% 
   filter(n != 0)
+
+extra_tbl %>% 
+  group_by(condition) %>% 
+  summarise(
+    mean_p = mean(p),
+    mean_k = mean(k)
+  )
 
 table(tbl2$condition, tbl2$cutoff)

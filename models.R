@@ -210,16 +210,16 @@ saveRDS(h1_null_min, "models/h1_null_min.rds")
 
 
 ## H1.1: Rules
-h1_rules <- brm(
-  data = extra_all,
-  extrapolation ~ rules + (rules * blocked || subj_id) + (rules * blocked || image),
-  family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-# -> 3 divergent transitions; probably not a problem
-saveRDS(h1_rules, "models/h1_rules_fullish.rds")
+# h1_rules <- brm(
+#   data = extra_all,
+#   extrapolation ~ rules + (rules * blocked || subj_id) + (rules * blocked || image),
+#   family = bernoulli(), prior = prior_effect,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.9),
+#   save_pars = save_pars(all = TRUE)
+# )
+# # -> 3 divergent transitions; probably not a problem
+# saveRDS(h1_rules, "models/h1_rules_fullish.rds")
 
 h1_rules_min <- brm(
   data = extra_all,
@@ -233,16 +233,16 @@ saveRDS(h1_rules_min, "models/h1_rules_min.rds")
 
 
 ## H1.2: Blocked
-h1_blocked <- brm(
-  data = extra_all,
-  extrapolation ~ blocked + (rules * blocked || subj_id) + (rules * blocked || image),
-  family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-# -> 1 divergent transition; probably not a problem
-saveRDS(h1_blocked, "models/h1_blocked_fullish.rds")
+# h1_blocked <- brm(
+#   data = extra_all,
+#   extrapolation ~ blocked + (rules * blocked || subj_id) + (rules * blocked || image),
+#   family = bernoulli(), prior = prior_effect,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.9),
+#   save_pars = save_pars(all = TRUE)
+# )
+# # -> 1 divergent transition; probably not a problem
+# saveRDS(h1_blocked, "models/h1_blocked_fullish.rds")
 
 h1_blocked_min <- brm(
   data = extra_all,
@@ -256,16 +256,16 @@ saveRDS(h1_blocked_min, "models/h1_blocked_min.rds")
 
 
 ## H1.3: Both & Interaction
-h1_both <- brm(
-  data = extra_all,
-  extrapolation ~ rules * blocked + (rules * blocked || subj_id) + (rules * blocked || image),
-  family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-# -> 220 divergent transitions with adapt_delta = 0.9 O_O
-#    looks definitely problematic when looking at the plots
+# h1_both <- brm(
+#   data = extra_all,
+#   extrapolation ~ rules * blocked + (rules * blocked || subj_id) + (rules * blocked || image),
+#   family = bernoulli(), prior = prior_effect,
+#   cores = ncore, iter = 20000, warmup = 4000,
+#   control = list(adapt_delta = 0.9),
+#   save_pars = save_pars(all = TRUE)
+# )
+# # -> 220 divergent transitions with adapt_delta = 0.9 O_O
+# #    looks definitely problematic when looking at the plots
 
 h1_both_min <- brm(
   data = extra_all,
@@ -306,19 +306,19 @@ plot(h1_both)
 #### Bayes Factors ----
 # H1.1: rules
 bayes_factor(h1_rules, h1_null)
-# -> h1_rules over h1_null: 0.42174
+# -> h1_rules over h1_null: 0.79600
 
 # H1.2: blocked
 bayes_factor(h1_blocked, h1_null)
-# -> h1_blocked over h1_null: 1.13209
+# -> h1_blocked over h1_null: 1.56607
 
 # H1.3: both
 bayes_factor(h1_both, h1_blocked)
-# ->  h1_both over h1_blocked: 0.25175
+# ->  h1_both over h1_blocked: 0.60126
 bayes_factor(h1_both, h1_rules)
-# -> h1_both over h1_rules: 0.59586
+# -> h1_both over h1_rules: 1.12844
 bayes_factor(h1_both, h1_null)
-# -> h1_both over h1_null: 0.26733
+# -> h1_both over h1_null: 0.88176
 
 
 
@@ -341,3 +341,37 @@ h2_null <- brm(
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
+saveRDS(h2_null, "models/h2_null.rds")
+
+h2_rules <- brm(
+  data = h2_data,
+  correct ~ rules + (1|subj_id + block),
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h2_rules, "models/h2_rules.rds")
+
+h2_inter <- brm(
+  data = h2_data,
+  correct ~ rules * block + (1|subj_id + block),
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h2_inter, "models/h2_inter.rds")
+
+
+#### Diagnostics ----
+rstan::check_divergences(h2_null$fit)
+rstan::check_divergences(h2_rules$fit)
+rstan::check_divergences(h2_inter$fit)
+
+
+#### Bayes Factors ----
+bayes_factor(h2_rules, h2_null)
+
+bayes_factor(h2_inter, h2_rules)
+bayes_factor(h2_inter, h2_null)

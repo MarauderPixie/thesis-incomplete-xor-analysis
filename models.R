@@ -38,13 +38,13 @@ rm(training, transfer, exctest)
 # )
 
 prior_null <- c(
-  set_prior("student_t(5, 0, 1)", class = "Intercept"), 
-  set_prior("student_t(5, 0, 1)", class = "sd")
+  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(3, 0, 1)", class = "sd")
 )
 prior_effect <- c(
-  set_prior("student_t(5, 0, 1)", class = "Intercept"), 
-  set_prior("student_t(5, 0, 1)", class = "sd"), 
-  set_prior("student_t(5, 0, 1)", class = "b")
+  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(3, 0, 1)", class = "sd"), 
+  set_prior("student_t(3, 0, 1)", class = "b")
 )
 
 #### Models on subsets ----
@@ -365,6 +365,10 @@ saveRDS(h2_inter, "models/h2_inter.rds")
 
 
 #### Diagnostics ----
+h2_null  <- readRDS("models/h2_null.rds")
+h2_rules <- readRDS("models/h2_rules.rds")
+h2_inter <- readRDS("models/h2_inter.rds")
+
 rstan::check_divergences(h2_null$fit)
 rstan::check_divergences(h2_rules$fit)
 rstan::check_divergences(h2_inter$fit)

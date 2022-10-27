@@ -1,0 +1,122 @@
+---
+title: "Result Summary"
+ipsum_meta:
+  og_url: "https\\://example.com/open/graph/finalURLfor/this"
+  og_description: "A modest size description of the content"
+  og_image: "https\\://example.com/open/graph/imageURLfor/this"
+output: 
+  hrbrthemes::ipsum:
+    toc: true
+---
+```{r include=FALSE}
+knitr::opts_chunk$set(fig.retina=2)
+```
+
+```{r ipsum_setup, message=FALSE, warning=FALSE, cache=FALSE, echo=FALSE}
+library(hrbrthemes)
+library(tidyverse)
+
+source("init.R")
+update_geom_font_defaults(font_rc)
+
+h1_null <- readRDS("models/h1_null_min.rds")
+h2_null <- readRDS("models/h2_null.rds")
+```
+
+## H1.1: Blocked Rules
+
+**(directed)** Higher number of extrapolations for the stimuli of the untrained/incomplete category in the blocked training condition, compared to the mixed training condition, in the transfer phase
+
+### Model Ouput
+
+```{r 1.1-model}
+h1_blocked <- readRDS("models/h1_blocked_min.rds")
+
+h1_blocked
+```
+
+### Inference / Bayes Factor
+
+```{r 1.1-bf}
+bayes_factor(h1_blocked, h1_null)
+```
+
+
+## H1.2: Instructions
+
+**(directed)** Higher number of extrapolations for the stimuli of the untrained/incomplete category in the blocked training condition, compared to the mixed training condition, in the transfer phase
+
+### Model Ouput
+
+```{r 1.2-model}
+h1_instructions <- readRDS("models/h1_rules_min.rds")
+
+h1_instructions
+```
+
+### Inference / Bayes Factor
+
+```{r 1.2-bf}
+bayes_factor(h1_instructions, h1_null)
+```
+
+
+## H1.3: Interaction of Blocked Rules and Instructions
+
+**(undirected, _exploratory_)** Interaction of rule order and the rule instructions on the number of extrapolations within the untrained/incomplete category
+
+### Model Ouput
+
+```{r 1.3-model}
+h1_both <- readRDS("models/h1_both_min.rds")
+
+h1_both
+```
+
+### Inference / Bayes Factor
+
+```{r 1.3-bf}
+bayes_factor(h1_both, h1_blocked)
+bayes_factor(h1_both, h1_instructions)
+bayes_factor(h1_both, h1_null)
+```
+
+
+
+## H2.1: Rule Instructions
+
+**(directed)** quicker learning of categories with rule instructions than without in the mixed rule condition
+
+### Model Ouput
+
+```{r 2.1-model}
+h2_rules <- readRDS("models/h2_rules.rds")
+
+h2_rules
+```
+
+### Inference / Bayes Factor
+
+```{r 2.1-bf}
+bayes_factor(h2_rules, h2_null)
+```
+
+
+## H2.2: Interaction of Training Block and Rule Instructions
+
+**(undirected, _exploratory_)** Interaction of learning accuracy between training blocks (3-12) and rule instructions in the blocked rule condition
+
+### Model Ouput
+
+```{r 2.2-model}
+h2_interaction <- readRDS("models/h2_inter.rds")
+
+h2_interaction
+```
+
+### Inference / Bayes Factor
+
+```{r 2.2-bf}
+bayes_factor(h2_interaction, h2_rules)
+bayes_factor(h2_interaction, h2_null)
+```

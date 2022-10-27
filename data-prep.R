@@ -3,6 +3,7 @@ source("magpie-credentials.R")
 
 library(httr)
 library(rvest)
+library(lubridate)
 
 n_total <- GET(
   "https://magpie.jemu.name/experiments",
@@ -36,14 +37,25 @@ critical <- paste0(
                "e31_3167-366.7.jpg", "e30_3167-233.3.jpg", "e29_3167-100.jpg")
 )
 
+## time range where I f**k*d up the assignment (sorta)
+date1 <- as.POSIXct("2022-10-26 12:59:00") # finished deployment github time stamp
+date2 <- as.POSIXct("2022-10-26 19:15:00")
+intvl <- lubridate::interval(date1, date2)
+
 #### all experimental data ----
-all_data <- GET(
+data_raw <- GET(
   "https://magpie.jemu.name/experiments/7/retrieve",
   authenticate(user, pass)
 ) |>
   content(as = "text", encoding = "UTF-8") |>
-  read_csv() %>% 
+  read_csv() 
+
+write_csv(data_raw, "data-raw/raw-data-27-10-2022.csv")
+saveRDS(data_raw, "data-raw/raw-data-27-10-2022.rds")
+
+
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
+all_data <- data_raw %>% 
   mutate(
     phase = case_when(
       !is.na(correct1) ~ "training",
@@ -54,6 +66,11 @@ all_data <- GET(
   select(-correct1, -correct2) %>% 
   left_join(trial_transfer, by = "image") %>% 
   mutate(
+    started   = lubridate::as_datetime(experiment_start_time / 1000, 
+                                       tz = "Europe/Berlin"),
+    submitted = lubridate::as_datetime(experiment_end_time / 1000, 
+                                       tz = "Europe/Berlin"),
+    condition = ifelse(started %within% intvl, 3, condition),
     item = case_when(
       image %in% critical ~ "transfer",
       image %in% neutral ~ "neutral",
@@ -79,14 +96,12 @@ all_data <- GET(
                           condition == 3 ~ "rules",
                           condition == 4 ~ "both") %>% 
       as_factor() %>% fct_relevel("control", "rules", "blocked"),
-    submitted = lubridate::as_datetime(experiment_end_time / 1000, 
-                                       tz = "Europe/Berlin"),
     duration  = experiment_duration / 1000
   )
 
 #### demographics ----
 data_post <- all_data %>% 
-  select(submitted, subj_id, condition, rules, 
+  select(started, submitted, subj_id, condition, rules, 
          blocked, age, duration, languages, strategy) %>% 
   distinct()
 
@@ -157,5 +172,5 @@ fs::dir_copy(
   overwrite = TRUE
 )
 
-rm(pass, user, trial_transfer, critical, 
+rm(pass, user, trial_transfer, critical, date1, date2, intvl, data_raw,
    neutral, all_data, data_post, dtrain, dtrans, dprob)

@@ -124,3 +124,24 @@ bayesfactor_models(expo_null, expo_rules,
 library(afex)
 fit1 <- aov_4(k ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
 fit2 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
+
+
+#### Response Times ----
+lort <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))[1]
+hirt <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))[2]
+
+rtdist <- transfer %>% 
+  # filter(item == "transfer") %>% 
+  mutate(
+    dist_x = abs(4 - img_x),
+    dist_y = abs(4 - img_y)
+  ) %>% 
+  filter(between(response_time, lort, hirt))
+
+fit1 <- lm(response_time ~ dist_x * dist_y, data = rtdist)
+
+fit2 <- brm(response_time ~ rules * blocked * dist_x * dist_y + (1|subj_id), 
+            data = rtdist, prior = prior_effect,
+            cores = ncore, iter = 12000, warmup = 2000,
+            control = list(adapt_delta = 0.8),
+            save_pars = save_pars(all = TRUE))

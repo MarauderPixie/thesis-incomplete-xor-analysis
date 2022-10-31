@@ -127,20 +127,19 @@ fit2 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
 
 
 #### Response Times ----
-lort <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))[1]
-hirt <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))[2]
+rt_quant <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))
 
-rtdist <- transfer %>% 
+rtdist <- age %>% 
   # filter(item == "transfer") %>% 
   mutate(
     dist_x = abs(4 - img_x),
     dist_y = abs(4 - img_y)
   ) %>% 
-  filter(between(response_time, lort, hirt))
+  filter(between(response_time, rt_quant[1], rt_quant[2]))
 
-fit1 <- lm(response_time ~ dist_x * dist_y, data = rtdist)
+fit1 <- lm(log(response_time) ~ dist_x * dist_y * age, data = rtdist) # 4tehlolz
 
-fit2 <- brm(response_time ~ rules * blocked * dist_x * dist_y + (1|subj_id), 
+fit2 <- brm(response_time ~ age * dist_x * dist_y + (1|subj_id), 
             data = rtdist, prior = prior_effect,
             cores = ncore, iter = 12000, warmup = 2000,
             control = list(adapt_delta = 0.8),

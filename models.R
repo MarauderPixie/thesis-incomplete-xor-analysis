@@ -38,13 +38,13 @@ rm(training, transfer, exctest)
 # )
 
 prior_null <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
   set_prior("student_t(3, 0, 1)", class = "sd")
 )
 prior_effect <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
+  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
   set_prior("student_t(3, 0, 1)", class = "sd"), 
-  set_prior("student_t(3, 0, 1)", class = "b")
+  set_prior("student_t(3, 0, 1)", class = "b", lb = -10, ub = 10)
 )
 
 #### Models on subsets ----
@@ -295,18 +295,19 @@ h1_null    <- readRDS("models/h1_null_min.rds")
 h1_rules   <- readRDS("models/h1_rules_min.rds")
 h1_blocked <- readRDS("models/h1_blocked_min.rds")
 h1_both    <- readRDS("models/h1_both_min.rds")
+h1_noint   <- readRDS("models/h1_both_noint.rds")
 
 rstan::check_divergences(h1_null$fit)
 rstan::check_divergences(h1_rules$fit)
 rstan::check_divergences(h1_blocked$fit)
 rstan::check_divergences(h1_both$fit)
-rstan::check_divergences(h1_both_noint$fit)
+rstan::check_divergences(h1_noint$fit)
 
 plot(h1_null)
 plot(h1_rules)
 plot(h1_blocked)
 plot(h1_both)
-plot(h1_both_noint)
+plot(h1_noint)
 
 ## TO-DO: prior predictive thingy vs. posterior predictive? Oder so?
 
@@ -319,18 +320,16 @@ plot(h1_both_noint)
 #### Bayes Factors ----
 # H1.1: rules
 bayes_factor(h1_rules, h1_null)
-# -> h1_rules over h1_null: 0.79600
 
 # H1.2: blocked
 bayes_factor(h1_blocked, h1_null)
-# -> h1_blocked over h1_null: 1.56607
 
 # H1.3: both
 bayes_factor(h1_both, h1_blocked)
 bayes_factor(h1_both, h1_rules)
 
 bayes_factor(h1_both, h1_null)
-bayes_factor(h1_both, h1_both_noint)
+bayes_factor(h1_both, h1_noint)
 
 
 

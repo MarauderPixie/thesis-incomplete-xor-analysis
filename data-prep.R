@@ -50,8 +50,20 @@ data_raw <- GET(
   content(as = "text", encoding = "UTF-8") |>
   read_csv() 
 
-write_csv(data_raw, "data-raw/raw-data-27-10-2022.csv")
-saveRDS(data_raw, "data-raw/raw-data-27-10-2022.rds")
+data_fixed <- data_raw %>% 
+  mutate(
+    started   = lubridate::as_datetime(experiment_start_time / 1000, 
+                                       tz = "Europe/Berlin"),
+    submitted = lubridate::as_datetime(experiment_end_time / 1000, 
+                                       tz = "Europe/Berlin"),
+    condition = ifelse(started %within% intvl, 3, condition)
+  )
+
+write_csv(data_raw,   "data-raw/raw-data-27-10-2022.csv")
+write_csv(data_fixed, "data-raw/fixed-data-27-10-2022.csv")
+saveRDS(data_raw,     "data-raw/raw-data-27-10-2022.rds")
+saveRDS(data_fixed,   "data-raw/fixed-data-27-10-2022.rds")
+
 
 
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 

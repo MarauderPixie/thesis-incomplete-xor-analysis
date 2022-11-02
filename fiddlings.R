@@ -174,9 +174,10 @@ training %>%
 ## histogram of proximations & extrapolations
 transfer %>% 
   filter(item == "transfer") %>% 
-  group_by(subj_id) %>% 
+  group_by(subj_id, condition) %>% 
   summarise(ext = sum(extrapolation)) %>% 
   ggplot(aes(ext)) +
+  facet_wrap(~condition) +
   geom_histogram(fill = "#3c4c72", color = "#f0f0f0", binwidth = 1) +
   scale_x_continuous(breaks = scales::pretty_breaks(n = 9))
 

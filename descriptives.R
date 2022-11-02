@@ -25,4 +25,4 @@ extra_tbl %>%
     mean_k = mean(k)
   )
 
-table(tbl2$condition, tbl2$cutoff)
+table(tbl2$condition, tbl2$cutoff) # |> prop.table(margin = 2) |> round(2)

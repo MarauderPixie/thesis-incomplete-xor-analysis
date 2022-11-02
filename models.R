@@ -278,6 +278,17 @@ h1_both_min <- brm(
 saveRDS(h1_both_min, "models/h1_both_min.rds")
 
 
+h1_both_noint <- brm(
+  data = extra_all,
+  extrapolation ~ rules + blocked + (1 | subj_id), # + (1 | image),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+saveRDS(h1_both_noint, "models/h1_both_noint.rds")
+
+
 
 #### Model Diagnostics ----
 h1_null    <- readRDS("models/h1_null_min.rds")
@@ -289,11 +300,13 @@ rstan::check_divergences(h1_null$fit)
 rstan::check_divergences(h1_rules$fit)
 rstan::check_divergences(h1_blocked$fit)
 rstan::check_divergences(h1_both$fit)
+rstan::check_divergences(h1_both_noint$fit)
 
 plot(h1_null)
 plot(h1_rules)
 plot(h1_blocked)
 plot(h1_both)
+plot(h1_both_noint)
 
 ## TO-DO: prior predictive thingy vs. posterior predictive? Oder so?
 
@@ -314,11 +327,10 @@ bayes_factor(h1_blocked, h1_null)
 
 # H1.3: both
 bayes_factor(h1_both, h1_blocked)
-# ->  h1_both over h1_blocked: 0.60126
 bayes_factor(h1_both, h1_rules)
-# -> h1_both over h1_rules: 1.12844
+
 bayes_factor(h1_both, h1_null)
-# -> h1_both over h1_null: 0.88176
+bayes_factor(h1_both, h1_both_noint)
 
 
 

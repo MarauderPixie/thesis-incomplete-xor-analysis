@@ -204,4 +204,4 @@ fs::dir_copy(
 )
 
 rm(pass, user, trial_transfer, critical, date1, date2, intvl, data_raw,
-   neutral, all_data, data_post, dtrain, dtrans, dprob, exctest)
+   neutral, all_data, data_post, dtrain, dtrans, dprob, exctest, data_fixed)

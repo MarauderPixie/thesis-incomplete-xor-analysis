@@ -1,7 +1,10 @@
 #### Data Preparation ----
 # With aggregation to binomial and different cutoffs
 # as to when someone counts as "extrapolator"
-extra_binom <- extra_all %>% 
+transfer <- readRDS("data-clean/trials-transfer.rds") %>% 
+  filter(item == "transfer")
+
+extra_binom <- transfer %>% 
   group_by(subj_id, rules, blocked) %>% 
   summarize(
     k = sum(extrapolation),
@@ -17,49 +20,66 @@ extra_binom <- extra_all %>%
 
 
 #### Priors ----
+# some odds (ratios)
+0.3 / 0.7 # <- baseline odds
+0.4 / 0.6 # <- rather large effect odds
+(.4/.6) / (.3/.7) # respective odds ratio?
+
 prior_null <- c(
-  set_prior("student_t(3, 0, 2.5)", class = "Intercept"), 
-  set_prior("student_t(3, 0, 2.5)", class = "sd")
+  # bc 30% in log odds = log(.3 / .7) = -0.8472979:
+  set_prior("student_t(3, -0.85, 1)", 
+            class = "Intercept", lb = -11, ub = 9),
+  # ...oder doch eher: log((0.3 / 0.7) / (1 - (0.3 / 0.7)))?
+  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0)
 )
 prior_effect <- c(
-  set_prior("student_t(3, 0, 2.5)", class = "Intercept"), 
-  set_prior("student_t(3, 0, 2.5)", class = "sd"), 
-  set_prior("student_t(3, 0, 2.5)", class = "b")
+  set_prior("student_t(3, -0.85, 1)", class = "Intercept", lb = -11, ub = 9), 
+  # set_prior("student_t(3, 0, 1)", class = "sd", lb = 0), 
+  set_prior("student_t(3, 0, 1)", class = "b", lb = -10, ub = 10)
 )
 
 #### Binomial models (instead of bernoulli) ----
-h1_binom_null <- brm(
+h1_null <- brm(
   data = extra_binom,
-  k|trials(n) ~ 1 + (1 | subj_id) ,
+  k|trials(n) ~ 1,
   family = binomial(), prior = prior_null,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
 
-h1_binom_rules <- brm(
+h1_null_rnd <- brm(
   data = extra_binom,
-  k|trials(n) ~ rules + (1 | subj_id) ,
-  family = binomial(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  k|trials(n) ~ 1 + (1 | subj_id),
+  family = binomial(), prior = prior_null_rnd,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
 
-h1_binom_blocked <- brm(
+h11 <- brm(
   data = extra_binom,
-  k|trials(n) ~ blocked + (1 | subj_id) ,
+  k|trials(n) ~ blocked,
   family = binomial(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
 
-h1_binom_both <- brm(
+h12 <- brm(
   data = extra_binom,
-  k|trials(n) ~ rules * blocked + (1 | subj_id) ,
+  k|trials(n) ~ rules,
   family = binomial(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+h13 <- brm(
+  data = extra_binom,
+  k|trials(n) ~ rules * blocked,
+  family = binomial(), prior = prior_effect,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
@@ -75,7 +95,7 @@ expo_null <- brm(
   data = extra_binom,
   exab4 ~ 1 + (1 | subj_id),
   family = bernoulli(), prior = prior_null,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.95),
   save_pars = save_pars(all = TRUE)
 )
@@ -84,7 +104,7 @@ expo_rules <- brm(
   data = extra_binom,
   exab4 ~ rules + (1 | subj_id),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.95),
   save_pars = save_pars(all = TRUE)
 )
@@ -93,7 +113,7 @@ expo_blocked <- brm(
   data = extra_binom,
   exab4 ~ blocked + (1 | subj_id),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.95),
   save_pars = save_pars(all = TRUE)
 )
@@ -102,7 +122,7 @@ expo_both <- brm(
   data = extra_binom,
   exab4 ~ rules * blocked + (1 | subj_id),
   family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
+  cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.95),
   save_pars = save_pars(all = TRUE)
 )
@@ -122,9 +142,14 @@ bayesfactor_models(expo_null, expo_rules,
 
 #### Going (A)NOVA! ----
 library(afex)
-fit1 <- aov_4(k ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
-fit2 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
-
+av_h0  <- aov_4(k ~ 1 + (1|subj_id), data = extra_binom, factorize = FALSE) %>% print()
+av_h11 <- aov_4(k ~ blocked, data = extra_binom) %>% print()
+av_h12 <- aov_4(k ~ rules, data = extra_binom) %>% print()
+# av_h12 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
+av_h131 <- aov_4(p ~ rules + blocked, data = extra_binom) %>% print()
+av_h132 <- aov_4(k ~ rules * blocked, data = extra_binom) %>% print()
+# none of the above work for som reason, but this does:
+aov_ez("subj_id", "k", extra_binom, between = c("rules", "blocked"))
 
 #### Response Times ----
 rt_quant <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))
@@ -144,3 +169,24 @@ fit2 <- brm(response_time ~ age * dist_x * dist_y + (1|subj_id),
             cores = ncore, iter = 12000, warmup = 2000,
             control = list(adapt_delta = 0.8),
             save_pars = save_pars(all = TRUE))
+
+
+
+#### C&K
+ckab6_null <- brm(
+  data = extra_binom,
+  exab6 ~ 1,
+  family = bernoulli(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.8),
+  save_pars = save_pars(all = TRUE)
+)
+
+ckab6_blocked <- brm(
+  data = extra_binom,
+  exab6~ blocked,
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.8),
+  save_pars = save_pars(all = TRUE)
+)

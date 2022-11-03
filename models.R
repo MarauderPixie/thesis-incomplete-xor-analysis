@@ -7,7 +7,7 @@ transfer <- readRDS("data-clean/trials-transfer.rds")
 # stimprob <- readRDS("data-clean/trials-probability.rds")
 
 extra_all <- filter(transfer, item == "transfer")
-rm(training, transfer, exctest)
+rm(training, transfer)
 
 #### Priors ----
 # get_prior(correct ~ blocked * block + (1 + image | subj_id),
@@ -19,15 +19,15 @@ rm(training, transfer, exctest)
 # )
 
 prior_null <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
-  set_prior("student_t(3, 0, 1)", class = "sd")
+  # bc 30% in log odds = log(.3 / .7) = -0.8472979:
+  set_prior("student_t(3, -0.85, 1)", class = "Intercept", lb = -11, ub = 9), 
+  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0)
 )
 prior_effect <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
-  set_prior("student_t(3, 0, 1)", class = "sd"), 
+  set_prior("student_t(3, -0.85, 1)", class = "Intercept", lb = -11, ub = 9), 
+  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0), 
   set_prior("student_t(3, 0, 1)", class = "b", lb = -10, ub = 10)
 )
-
 #### Models on subsets ----
 extra_rules   <- filter(extra_all, condition %in% c("control", "rules"))
 extra_blocked <- filter(extra_all, condition %in% c("control", "blocked"))

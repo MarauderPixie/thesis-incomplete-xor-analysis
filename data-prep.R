@@ -59,11 +59,6 @@ data_fixed <- data_raw %>%
     condition = ifelse(started %within% intvl, 3, condition)
   )
 
-write_csv(data_raw,   "data-raw/raw-data-27-10-2022.csv")
-write_csv(data_fixed, "data-raw/fixed-data-27-10-2022.csv")
-saveRDS(data_raw,     "data-raw/raw-data-27-10-2022.rds")
-saveRDS(data_fixed,   "data-raw/fixed-data-27-10-2022.rds")
-
 
 
 # all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
@@ -188,11 +183,15 @@ dprob  <- dprob %>%
   filter(!(subj_id %in% exctest$subj_id))
 
 #### save to disk & cleanup ----
-# to-do: die ganzen type-casts gehen natürlcih wieder verloren hier m)
+# to-do: die ganzen type-casts gehen natürlich wieder verloren hier m)
 # write_csv(data_post, "data-clean/demographics.csv")
 # write_csv(dtrain,    "data-clean/trials-training.csv")
 # write_csv(dtrans,    "data-clean/trials-transfer.csv")
 # write_csv(dprob,     "data-clean/trials-probability.csv")
+write_csv(data_raw,   "data-raw/raw-data-27-10-2022.csv")
+write_csv(data_fixed, "data-raw/fixed-data-27-10-2022.csv")
+saveRDS(data_raw,     "data-raw/raw-data-27-10-2022.rds")
+saveRDS(data_fixed,   "data-raw/fixed-data-27-10-2022.rds")
 saveRDS(data_post, "data-clean/demographics.rds")
 saveRDS(dtrain,    "data-clean/trials-training.rds")
 saveRDS(dtrans,    "data-clean/trials-transfer.rds")

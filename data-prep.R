@@ -167,6 +167,26 @@ dprob <- all_data %>%
          prob, response_time)
 
 
+#### Apply exclusion criteria ----
+exctest <- dtrain %>% 
+  filter(block > 9) %>% 
+  group_by(subj_id) %>% 
+  summarise(
+    n = n(),
+    k = sum(correct),
+    p = k / n
+  ) %>% 
+  filter(p < .7)
+
+data_post <- data_post %>%
+  filter(!(subj_id %in% exctest$subj_id))
+dtrain <- dtrain %>% 
+  filter(!(subj_id %in% exctest$subj_id))
+dtrans <- dtrans %>% 
+  filter(!(subj_id %in% exctest$subj_id))
+dprob  <- dprob %>%
+  filter(!(subj_id %in% exctest$subj_id))
+
 #### save to disk & cleanup ----
 # to-do: die ganzen type-casts gehen natürlcih wieder verloren hier m)
 # write_csv(data_post, "data-clean/demographics.csv")
@@ -185,4 +205,4 @@ fs::dir_copy(
 )
 
 rm(pass, user, trial_transfer, critical, date1, date2, intvl, data_raw,
-   neutral, all_data, data_post, dtrain, dtrans, dprob)
+   neutral, all_data, data_post, dtrain, dtrans, dprob, exctest)

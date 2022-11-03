@@ -6,25 +6,6 @@ training <- readRDS("data-clean/trials-training.rds")
 transfer <- readRDS("data-clean/trials-transfer.rds")
 # stimprob <- readRDS("data-clean/trials-probability.rds")
 
-exctest <- training %>% 
-  filter(block > 9) %>% 
-  group_by(subj_id) %>% 
-  summarise(
-    n = n(),
-    k = sum(correct),
-    p = k / n
-  ) %>% 
-  filter(p < .7)
-
-# demo <- demo %>% 
-#   filter(!(subj_id %in% exctest$subj_id))
-training <- training %>% 
-  filter(!(subj_id %in% exctest$subj_id))
-transfer <- transfer %>% 
-  filter(!(subj_id %in% exctest$subj_id))
-# stimprob <- stimprob %>% 
-#   filter(!(subj_id %in% exctest$subj_id))
-
 extra_all <- filter(transfer, item == "transfer")
 rm(training, transfer, exctest)
 

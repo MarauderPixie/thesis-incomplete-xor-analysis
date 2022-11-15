@@ -1,10 +1,14 @@
+source("init.R")
+
 #### Data Preparation ----
 # With aggregation to binomial and different cutoffs
 # as to when someone counts as "extrapolator"
-transfer <- readRDS("data-clean/trials-transfer.rds") %>% 
+transfer <- readRDS("data-clean/trials-transfer.rds")
+
+extra_berni <- transfer %>% 
   filter(item == "transfer")
 
-extra_binom <- transfer %>% 
+extra_binom <- extra_berni %>% 
   group_by(subj_id, rules, blocked) %>% 
   summarize(
     k = sum(extrapolation),
@@ -34,7 +38,7 @@ prior_null <- c(
 )
 prior_effect <- c(
   set_prior("student_t(3, -0.85, 1)", class = "Intercept", lb = -11, ub = 9), 
-  # set_prior("student_t(3, 0, 1)", class = "sd", lb = 0), 
+  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0), 
   set_prior("student_t(3, 0, 1)", class = "b", lb = -10, ub = 10)
 )
 
@@ -42,7 +46,7 @@ prior_effect <- c(
 h1_null <- brm(
   data = extra_binom,
   k|trials(n) ~ 1,
-  family = binomial(), prior = prior_null,
+  family = binomial(), prior = prior_null[1,],
   cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
@@ -51,7 +55,7 @@ h1_null <- brm(
 h1_null_rnd <- brm(
   data = extra_binom,
   k|trials(n) ~ 1 + (1 | subj_id),
-  family = binomial(), prior = prior_null_rnd,
+  family = binomial(), prior = prior_null,
   cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
@@ -142,14 +146,43 @@ bayesfactor_models(expo_null, expo_rules,
 
 #### Going (A)NOVA! ----
 library(afex)
-av_h0  <- aov_4(k ~ 1 + (1|subj_id), data = extra_binom, factorize = FALSE) %>% print()
-av_h11 <- aov_4(k ~ blocked, data = extra_binom) %>% print()
-av_h12 <- aov_4(k ~ rules, data = extra_binom) %>% print()
+av_h0  <- aov_4(p ~ 1 + (1|subj_id), data = extra_binom, factorize = FALSE) %>% print()
+av_h11 <- aov_4(p ~ blocked, data = extra_binom) %>% print()
+av_h12 <- aov_4(p ~ rules, data = extra_binom) %>% print()
 # av_h12 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
 av_h131 <- aov_4(p ~ rules + blocked, data = extra_binom) %>% print()
-av_h132 <- aov_4(k ~ rules * blocked, data = extra_binom) %>% print()
+av_h132 <- aov_4(exab6 ~ rules * blocked, data = extra_binom) %>% print()
 # none of the above work for som reason, but this does:
-aov_ez("subj_id", "k", extra_binom, between = c("rules", "blocked"))
+aov_ez("subj_id", "p", extra_binom, between = c("rules", "blocked"))
+
+
+library(BayesFactor)
+aov_fctr <- extra_binom %>% 
+  mutate(
+    rules   = as_factor(rules),
+    blocked = as_factor(blocked)
+  )
+BayesFactor::anovaBF(p ~ rules * blocked, aov_fctr, whichRandom = "subj_id",
+                     iterations = 40000, whichModels = "all")
+
+
+
+#### lme4, GLM, etc.
+library(lme4)
+
+m0 <- glmer(p ~ 1 + (1 | subj_id), data = extra_binom,  
+            weights = n, family = binomial)
+m1 <- glmer(p ~ blocked + (1 | subj_id), data = extra_binom,  
+            weights = n, family = binomial)
+m2 <- glmer(p ~ rules + (1 | subj_id), data = extra_binom,  
+            weights = n, family = binomial)
+m3 <- glmer(p ~ blocked + rules + (1 | subj_id), data = extra_binom,  
+            weights = n, family = binomial)
+m4 <- glmer(p ~ blocked * rules + (1 | subj_id), data = extra_binom,  
+            weights = n, family = binomial)
+
+anova(m0, m1, m2, m3, m4)
+
 
 #### Response Times ----
 rt_quant <- as.numeric(quantile(transfer$response_time, probs = c(.01, .99)))
@@ -190,3 +223,99 @@ ckab6_blocked <- brm(
   control = list(adapt_delta = 0.8),
   save_pars = save_pars(all = TRUE)
 )
+
+
+#### sthsth full model...
+extrap <- transfer %>% 
+  filter(item == "transfer") %>% 
+  mutate(
+    img = str_extract(image, "e\\d\\d")
+  )
+
+
+fit1 <- brm(
+  data = extrap,
+  extrapolation ~ blocked * rules + (blocked + rules | subj_id + img),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+fit2 <- brm(
+  data = extrap,
+  extrapolation ~ blocked * rules + (1 | subj_id + img),
+  family = bernoulli(), prior = prior_effect,
+  cores = ncore, iter = 20000, warmup = 4000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+
+
+
+
+rstan::check_divergences(h1_noint$fit)
+
+plot(h1_null)
+
+
+
+#### lme4 vs. brms: comparing percentages to successes
+m1_lme4_p <- glmer(p ~ 1 + (1 | subj_id), data = extra_binom,  
+                   weights = n, family = binomial)
+
+m1_lme4_k <- glmer(extrapolation ~ 1 + (1 | subj_id), 
+                   data = extra_berni, family = binomial)
+# -> virtually identical results, hooray!
+
+m2_brms_k_default <- brm(extrapolation ~ 1 + (1 | subj_id), 
+                         data = extra_berni, family = bernoulli(), # !!
+                         cores = ncore, iter = 12000, warmup = 2000,
+                         control = list(adapt_delta = 0.9),
+                         save_pars = save_pars(all = TRUE))
+
+priors_gelman <- c(
+  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10),
+  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0)
+)
+priors_lme4 <- c(
+  set_prior("student_t(3, -7.64, .74)", class = "Intercept", lb = -18, ub = 2),
+  set_prior("student_t(3,  7.29, 1)", class = "sd", lb = 0)
+)
+priors_brms <- c(
+  set_prior("student_t(3, -4.67, .53)", class = "Intercept", lb = -15, ub = 15),
+  set_prior("student_t(3,  4.32, .5)", class = "sd", lb = 0)
+)
+
+m2_brms_k_gelman <- update(m2_brms_k_default, prior = priors_gelman, cores = ncore)
+m2_brms_k_lme4   <- update(m2_brms_k_default, prior = priors_lme4, cores = ncore)
+m2_brms_k_brms   <- update(m2_brms_k_default, prior = priors_brms, cores = ncore)
+
+l1 <- loo(m2_brms_k_default, save_psis = TRUE)
+l2 <- loo(m2_brms_k_gelman, save_psis = TRUE) # , criterion = c("loo", "waic", "marglik"), moment_match = TRUE)
+l3 <- loo(m2_brms_k_lme4, save_psis = TRUE) # , criterion = c("loo", "waic", "marglik"), moment_match = TRUE)
+l4 <- loo(m2_brms_k_brms, save_psis = TRUE) # , criterion = c("loo", "waic", "marglik"), moment_match = TRUE)
+
+
+loo_compare(l1, l2, l3, l4)
+
+
+b1 <- bridge_sampler(m2_brms_k_default)
+b2 <- bridge_sampler(m2_brms_k_gelman)
+b3 <- bridge_sampler(m2_brms_k_lme4)
+b4 <- bridge_sampler(m2_brms_k_brms)
+
+bayestestR::bayesfactor_models(m2_brms_k_default, m2_brms_k_gelman, 
+                               m2_brms_k_lme4, m2_brms_k_brms)
+
+# ok, so, m2_brms_k_brms seems best, but how about without prior-bounds?
+m2_brms_k_brms_unbounded <- update(m2_brms_k_default, prior = c(
+  set_prior("student_t(3, -4.67, .53)", class = "Intercept"),
+  set_prior("student_t(3,  4.32, .5)", class = "sd", lb = 0)
+), cores = ncore)
+
+l5 <- loo(m2_brms_k_brms_unbounded, save_psis = TRUE)
+loo_compare(l4, l5)
+b5 <- bridge_sampler(m2_brms_k_brms_unbounded)
+bayes_factor(m2_brms_k_brms_unbounded, m2_brms_k_brms)

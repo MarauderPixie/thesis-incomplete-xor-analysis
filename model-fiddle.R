@@ -3,9 +3,7 @@ source("init.R")
 #### Data Preparation ----
 # With aggregation to binomial and different cutoffs
 # as to when someone counts as "extrapolator"
-transfer <- readRDS("data-clean/trials-transfer.rds")
-
-extra_berni <- transfer %>% 
+extra_berni <- readRDS("data-clean/trials-transfer.rds") %>% 
   filter(item == "transfer")
 
 extra_binom <- extra_berni %>% 
@@ -150,7 +148,7 @@ av_h0  <- aov_4(p ~ 1 + (1|subj_id), data = extra_binom, factorize = FALSE) %>% 
 av_h11 <- aov_4(p ~ blocked, data = extra_binom) %>% print()
 av_h12 <- aov_4(p ~ rules, data = extra_binom) %>% print()
 # av_h12 <- aov_4(p ~ rules * blocked + (1|subj_id), data = extra_binom) %>% print()
-av_h131 <- aov_4(p ~ rules + blocked, data = extra_binom) %>% print()
+aov_inter <- aov_4(p ~ rules * blocked + Error(1|subj_id), data = extra_binom) %>% print()
 av_h132 <- aov_4(exab6 ~ rules * blocked, data = extra_binom) %>% print()
 # none of the above work for som reason, but this does:
 aov_ez("subj_id", "p", extra_binom, between = c("rules", "blocked"))
@@ -162,8 +160,8 @@ aov_fctr <- extra_binom %>%
     rules   = as_factor(rules),
     blocked = as_factor(blocked)
   )
-BayesFactor::anovaBF(p ~ rules * blocked, aov_fctr, whichRandom = "subj_id",
-                     iterations = 40000, whichModels = "all")
+aov_bf <- BayesFactor::anovaBF(p ~ rules * blocked, aov_fctr, whichRandom = "subj_id",
+                               iterations = 40000, whichModels = "all")
 
 
 
@@ -180,6 +178,9 @@ m3 <- glmer(p ~ blocked + rules + (1 | subj_id), data = extra_binom,
             weights = n, family = binomial)
 m4 <- glmer(p ~ blocked * rules + (1 | subj_id), data = extra_binom,  
             weights = n, family = binomial)
+
+m5 <- glmer(extrapolation ~ blocked * rules + (1 | subj_id), data = extra_berni,  
+            weights = rep(9, nrow(extra_berni)), family = binomial)
 
 anova(m0, m1, m2, m3, m4)
 
@@ -225,39 +226,6 @@ ckab6_blocked <- brm(
 )
 
 
-#### sthsth full model...
-extrap <- transfer %>% 
-  filter(item == "transfer") %>% 
-  mutate(
-    img = str_extract(image, "e\\d\\d")
-  )
-
-
-fit1 <- brm(
-  data = extrap,
-  extrapolation ~ blocked * rules + (blocked + rules | subj_id + img),
-  family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-
-fit2 <- brm(
-  data = extrap,
-  extrapolation ~ blocked * rules + (1 | subj_id + img),
-  family = bernoulli(), prior = prior_effect,
-  cores = ncore, iter = 20000, warmup = 4000,
-  control = list(adapt_delta = 0.9),
-  save_pars = save_pars(all = TRUE)
-)
-
-
-
-
-
-rstan::check_divergences(h1_noint$fit)
-
-plot(h1_null)
 
 
 

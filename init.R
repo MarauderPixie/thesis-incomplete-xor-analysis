@@ -15,4 +15,14 @@ theme_transfer <- theme(legend.text = element_blank(),
                         axis.title.y  = element_blank(),
                         panel.grid.major = element_blank(),
                         panel.grid.minor = element_blank())
+theme_subjects <- theme(legend.position = "top",
+                        axis.text.x = element_blank(),
+                        axis.text.y = element_blank(),
+                        axis.title.x  = element_blank(),
+                        axis.title.y  = element_blank(),
+                        panel.grid.major = element_blank(),
+                        panel.grid.minor = element_blank(),
+                        # panel.border = element_rect(fill = NA),
+                        panel.spacing = unit(5, "pt"),
+                        strip.text = element_text(size = 6))
 ncore <- parallel::detectCores()

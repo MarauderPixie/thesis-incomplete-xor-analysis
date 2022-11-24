@@ -160,8 +160,8 @@ aov_fctr <- extra_binom %>%
     rules   = as_factor(rules),
     blocked = as_factor(blocked)
   )
-aov_bf <- BayesFactor::anovaBF(p ~ rules * blocked, aov_fctr, whichRandom = "subj_id",
-                               iterations = 40000, whichModels = "all")
+BayesFactor::anovaBF(p ~ rules * blocked, aov_fctr, 
+                     iterations = 40000, whichModels = "withmain")
 
 
 
@@ -287,3 +287,36 @@ l5 <- loo(m2_brms_k_brms_unbounded, save_psis = TRUE)
 loo_compare(l4, l5)
 b5 <- bridge_sampler(m2_brms_k_brms_unbounded)
 bayes_factor(m2_brms_k_brms_unbounded, m2_brms_k_brms)
+
+
+#### Including the "mid lanes" ----
+midlanes <- transfer %>%
+  filter(img_x > 3, img_y < 5) %>%
+  mutate(
+    nuex = ifelse(response == "Nobz", 0, 1)
+  )
+
+mid_aggr <- midlanes %>% 
+  group_by(subj_id, rules, blocked) %>% 
+  summarize(
+    k = sum(nuex),
+    n = n(),
+    p = k / n,
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    # exab4 = ifelse(k > 3, 1, 0),
+    # exab5 = ifelse(k > 4, 1, 0),
+    exab6 = ifelse(k > 5, 1, 0)
+  )
+
+mid_obachtet <- mid_aggr %>% 
+  group_by(rules, blocked) %>% 
+  summarise(
+    mean_p = mean(p),
+    sd_p   = sd(p),
+    mean_k = mean(k),
+    sd_k   = sd(k),
+    mean_ckab6 = mean(exab6),
+    .groups = "drop"
+  )

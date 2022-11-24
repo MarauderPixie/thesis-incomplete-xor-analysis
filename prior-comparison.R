@@ -7,10 +7,16 @@ extra_binom <- readRDS("data-clean/trials-transfer.rds") %>%
   summarize(
     k = sum(extrapolation),
     n = n(),
-    p = k / n
+    p = k / n,
+    .groups = "drop"
   ) %>% 
-  ungroup() %>% 
   mutate(
+    combi = case_when(
+      rules == "yes" & blocked == "yes" ~ "both",
+      rules == "no"  & blocked == "yes" ~ "blocked",
+      rules == "yes" & blocked == "no"  ~ "rules",
+      TRUE ~ "neither"
+    ),
     exab4 = ifelse(k > 3, 1, 0),
     exab5 = ifelse(k > 4, 1, 0),
     exab6 = ifelse(k > 5, 1, 0)
@@ -23,113 +29,94 @@ beobachtet <- extra_binom %>%
     sd_p   = sd(p),
     mean_k = mean(k),
     sd_k   = sd(k),
-    mean_ckab6 = mean(exab6)
+    mean_ckab6 = mean(exab6),
+    mean_ckab5 = mean(exab5),
+    .groups = "drop"
   )
 
-print(beobachtet)
 
-
-## Priors ----
-p0 <- c(
-  set_prior("student_t(5, 0, 1)", class = "Intercept"),
-  set_prior("student_t(5, 0, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(5, 0, 1)", class = "b")
-)
-
-## performs worst in terms of BF ##
-p1 <- c(
-  set_prior("student_t(5, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
-  set_prior("student_t(5, 0, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(5, 0, 1)", class = "b", lb = -10, ub = 10)
-)
-###################################
-
-## best in terms of BF ##
-p2 <- c(
-  set_prior("student_t(5, -5.4, .7)", class = "Intercept"),
-  set_prior("student_t(5,    4, .5)", class = "sd", lb = 0), 
-  set_prior("student_t(5,  .74, .7)", class = "b")
-)
-#########################
-
-p3 <- c(
-  set_prior("student_t(5, -5.4, .7)", class = "Intercept", lb = -15, ub = 5), 
-  set_prior("student_t(5,    4, .5)", class = "sd", lb = 0), 
-  set_prior("student_t(5,  .74, .7)", class = "b", lb = -9, ub = 11)
-)
-
-# 🎵 qlogis(beobachtet$mean_p)
-# [1] -2.572612 -1.398416 -1.916923 -1.177203
-# 🎵 qlogis(mean(beobachtet$mean_p[2:4]) - beobachtet$mean_p[1])
-# [1] -2.027418
-p4 <- c(
-  set_prior("student_t(5, -2.57, 1)", class = "Intercept"), 
-  set_prior("student_t(5,     4, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(5, -2.03, 1)", class = "b")
-)
-
-p5 <- c(
-  set_prior("student_t(7, -2.57, 1)", class = "Intercept"), 
-  set_prior("student_t(7,     4, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(7, -2.03, 1)", class = "b")
-)
-
-
-p6 <- c(
-  set_prior("student_t(3, -2.57, 1)", class = "Intercept"), 
-  set_prior("student_t(3,     4, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(3, -2.03, 1)", class = "b")
-)
-
-p7 <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept"),
-  set_prior("student_t(3, 0, 1)", class = "sd", lb = 0), 
+#### Priors ----
+# Gelman-Default
+prior_null   <- set_prior("student_t(3, 0, 1)", class = "Intercept")
+prior_effect <- c(
+  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
   set_prior("student_t(3, 0, 1)", class = "b")
 )
 
-p8 <- c(
-  set_prior("student_t(7, 0, 1)", class = "Intercept"),
-  set_prior("student_t(7, 0, 1)", class = "sd", lb = 0), 
-  set_prior("student_t(7, 0, 1)", class = "b")
+# bounded
+prior_null_bounded <- set_prior(
+  "student_t(3, 0, 1)",class = "Intercept", lb = -10, ub = 10
+)
+prior_effect_bounded <- c(
+  set_prior("student_t(3, 0, 1)", class = "Intercept", lb = -10, ub = 10), 
+  set_prior("student_t(3, 0, 1)", class = "b", lb = -10, ub = 10)
 )
 
+# based on sample descriptives: number of extrapolations
+prior_null_data   <- set_prior(
+  "student_t(3, -1.73, 1)", class = "Intercept" # qlogis(mean(extra_binom$p))
+)
+prior_effect_data <- c(
+  set_prior("student_t(3, -2.88, 1)", class = "Intercept"), 
+  set_prior("student_t(3, -1.49, 1)", class = "b") # qlogis(mean(c(.196, .129, .229)))
+)
+
+
 #### Prior Comparison ----
-## for simplicity and manageability only the full model(s) will be compared
-fit_p0 <- brm(
+## intercept-only model ----
+fit0_default <- brm(
   data = extra_binom,
-  k|trials(n) ~ rules * blocked + (1 | subj_id),
-  family = binomial(), prior = p0,
+  k|trials(n) ~ 1,
+  family = binomial(), prior = prior_null,
   cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
 )
 
-fit_p1 <- update(fit_p0, prior = p1, cores = ncore)
-fit_p2 <- update(fit_p0, prior = p2, cores = ncore)
-fit_p3 <- update(fit_p0, prior = p3, cores = ncore)
-fit_p4 <- update(fit_p0, prior = p4, cores = ncore)
-fit_p5 <- update(fit_p0, prior = p5, cores = ncore)
-fit_p6 <- update(fit_p0, prior = p6, cores = ncore)
-fit_p7 <- update(fit_p0, prior = p7, cores = ncore)
-fit_p8 <- update(fit_p0, prior = p8, cores = ncore)
+fit0_bounded <- update(fit0_default, prior = prior_null_bounded, cores = ncore)
+fit0_sample  <- update(fit0_default, prior = prior_null_data, cores = ncore)
 
-## bridgesampling ----
-bs0 <- bridge_sampler(fit_p0)
-bs1 <- bridge_sampler(fit_p1)
-bs2 <- bridge_sampler(fit_p2)
-bs3 <- bridge_sampler(fit_p3)
-bs4 <- bridge_sampler(fit_p4)
-bs5 <- bridge_sampler(fit_p5)
-bs6 <- bridge_sampler(fit_p6)
-bs7 <- bridge_sampler(fit_p7)
-bs8 <- bridge_sampler(fit_p8)
+## bridgesampling 
+bs0_default <- bridge_sampler(fit0_default)
+bs0_bounded <- bridge_sampler(fit0_bounded)
+bs0_sample  <- bridge_sampler(fit0_sample)
 
-bs0
-bs1
-bs2
-bs3
-bs4
-bs5
-bs6
-bs7
-bs8
+## leave-one-out 
+loo0_default <- add_criterion(fit0_default, "marglik") %>% loo(save_psis = TRUE)
+loo0_bounded <- add_criterion(fit0_bounded, "marglik") %>% loo(save_psis = TRUE)
+loo0_sample  <- add_criterion(fit0_sample, "marglik") %>% loo(save_psis = TRUE)
+
+loo_compare(loo0_default, loo0_bounded, loo0_sample)
+
+
+## full model ----
+fit1_default <- brm(
+  data = extra_binom,
+  k|trials(n) ~ blocked * rules,
+  family = binomial(), prior = prior_effect,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+fit1_bounded <- update(fit1_default, prior = prior_effect_bounded, cores = ncore)
+fit1_sample  <- update(fit1_default, prior = prior_effect_data, cores = ncore)
+
+## bridgesampling 
+bs1_default <- bridge_sampler(fit1_default)
+bs1_boudned <- bridge_sampler(fit1_bounded)
+bs1_sample  <- bridge_sampler(fit1_sample)
+
+bayestestR::bayesfactor_models(fit1_default, fit1_bounded, fit1_sample)
+
+## leave-one-out 
+loo1_default <- loo(fit1_default, save_psis = TRUE)
+loo1_bounded <- loo(fit1_bounded, save_psis = TRUE)
+loo1_sample  <- loo(fit1_sample, save_psis = TRUE)
+
+loo_compare(loo1_default, loo1_bounded, loo1_sample)
+
+# -> not sure if sinnvoll, aber BF(default|sample) = 12ish,
+#    margliks und loo_compare sagen eh, es mache keinen
+#    nennenswerten unterschied, daher bleib ich einfach bei Gelman...
+

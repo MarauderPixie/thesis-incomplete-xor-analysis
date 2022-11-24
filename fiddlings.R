@@ -49,7 +49,7 @@ training %>%
   ) %>% 
   ungroup() %>% 
   ggplot(aes(block, acc_mean, color = condition, group = condition)) +
-    geom_line(position = position_dodge(0.3)) +
+    geom_line(position = position_dodge(0.3), alpha = .3) +
     geom_point(position = position_dodge(0.3), size = 2) +
     geom_linerange(aes(ymax = acc_hi, ymin = acc_lo),
                    position = position_dodge(0.3)) +

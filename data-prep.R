@@ -60,9 +60,7 @@ data_fixed <- data_raw %>%
   )
 
 
-
-# all_data <- read_csv("data-raw/results_7_incomplete-xor_Tobi--230822.csv") %>% 
-all_data <- data_raw %>% 
+all_data <- data_fixed %>% 
   mutate(
     phase = case_when(
       !is.na(correct1) ~ "training",
@@ -77,7 +75,7 @@ all_data <- data_raw %>%
                                        tz = "Europe/Berlin"),
     submitted = lubridate::as_datetime(experiment_end_time / 1000, 
                                        tz = "Europe/Berlin"),
-    condition = ifelse(started %within% intvl, 3, condition),
+    # condition = ifelse(started %within% intvl, 3, condition),
     item = case_when(
       image %in% critical ~ "transfer",
       image %in% neutral ~ "neutral",
@@ -165,13 +163,12 @@ dprob <- all_data %>%
 #### Apply exclusion criteria ----
 exctest <- dtrain %>% 
   filter(block > 9) %>% 
-  group_by(subj_id) %>% 
+  group_by(subj_id, image) %>% 
   summarise(
     n = n(),
-    k = sum(correct),
-    p = k / n
+    p = mean(correct)
   ) %>% 
-  filter(p < .7)
+  filter(p < .65)
 
 data_post <- data_post %>%
   filter(!(subj_id %in% exctest$subj_id))

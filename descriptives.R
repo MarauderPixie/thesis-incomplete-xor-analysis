@@ -77,8 +77,8 @@ transfer %>%
 # on the stimuli on which they had to apply the XOR rule (see fig. x for all 
 # participants affected by the change).
 
-
-## transfer phase per person
+#### Extrapolations / Transfer Phase ----
+## transfer phase per person ----
 transfer %>% 
   ggplot(aes(img_x, img_y, fill = response)) +
   facet_wrap(~subj_id) +
@@ -87,7 +87,30 @@ transfer %>%
   theme_subjects
 
 
+## transfer gradients per condition
+extra_pols <- filter(extra_binom, exab6 == 1)
 
+transfer %>% 
+  count(condition, img_x, img_y, response) %>% 
+  spread(response, n) %>% 
+  mutate(
+    extra = ifelse(subj_id %in% extra_pols$subj_id, "Extrapolators", "Proximators"),
+    Nobz = ifelse(is.na(Nobz), 0, Nobz),
+    Grot = ifelse(is.na(Grot), 0, Grot),
+    n = Nobz + Grot,
+    p_Grot = Grot / n
+  ) %>% 
+  ggplot(aes(img_x, img_y, fill = p_Grot)) +
+  facet_wrap(~condition) +
+  geom_tile(size = .5, color = "white") +
+  # scale_fill_brewer(palette = "Set1") +
+  scale_fill_viridis_c() +
+  theme_subjects
+
+
+
+
+#### Response Times ----
 ## rts, outliers, sowas
 e_nobz <- transfer %>% 
   count(subj_id, response) %>% 

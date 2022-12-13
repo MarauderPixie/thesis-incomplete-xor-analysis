@@ -23,19 +23,6 @@ extra_binom <- readRDS("data-clean/trials-transfer.rds") %>%
     exab6 = ifelse(k > 5, 1, 0)
   )
 
-beobachtet <- extra_binom %>% 
-  group_by(rules, blocked) %>% 
-  summarise(
-    mean_p = mean(p),
-    sd_p   = sd(p),
-    mean_k = mean(k),
-    sd_k   = sd(k),
-    mean_ckab6 = mean(exab6),
-    mean_ckab5 = mean(exab5),
-    .groups = "drop"
-  )
-
-
 ## training
 training <- readRDS("data-clean/trials-training.rds")
 
@@ -68,11 +55,11 @@ blocks_rules <- training %>%
 
 #### Priors ----
 prior_null   <- set_prior(
-  "student_t(3, 0, 1)", class = "Intercept"
+  "student_t(3, -1, 1)", class = "Intercept", lb = -4.6
 )
 prior_effect <- c(
-  set_prior("student_t(3, 0, 1)", class = "Intercept"), 
-  set_prior("student_t(3, 0, 1)", class = "b")
+  set_prior("student_t(3, -1, 1)", class = "Intercept", lb = -4.6), 
+  set_prior("student_t(3, .5, 1)", class = "b")
 )
 
 #### H1 Models ----
@@ -99,19 +86,28 @@ h1_inter   <- update(h1_null, k|trials(n) ~ blocked * rules,
                      cores = ncore)
 
 ## store away
-saveRDS(h1_null,    "models/h1_transfer/h10.rds")
-saveRDS(h1_blocked, "models/h1_transfer/h11.rds")
-saveRDS(h1_rules,   "models/h1_transfer/h12.rds")
-saveRDS(h1_both,    "models/h1_transfer/h131.rds")
-saveRDS(h1_inter,   "models/h1_transfer/h132.rds")
+saveRDS(h1_null,    "models/h1_transfer_fe/h10.rds")
+saveRDS(h1_blocked, "models/h1_transfer_fe/h11.rds")
+saveRDS(h1_rules,   "models/h1_transfer_fe/h12.rds")
+saveRDS(h1_both,    "models/h1_transfer_fe/h131.rds")
+saveRDS(h1_inter,   "models/h1_transfer_fe/h132.rds")
 
 
 #### C&K Models ----
+pck_null   <- c(
+  set_prior("student_t(3, -.85, 1)", class = "Intercept", lb = -4.6),
+  set_prior("student_t(3,   .3, 1)", class = "sd", lb = 0, ub = 5)
+)
+pck_effect <- c(
+  set_prior("student_t(3, -.85, 1)", class = "Intercept", lb = -4.6), 
+  set_prior("student_t(3,   .3, 1)", class = "sd", lb = 0, ub = 5),
+  set_prior("student_t(3,   .5, 1)", class = "b")
+)
 ## "Extrapolator" ab 5 trials
 ck_ab5_null <- brm(
   data = extra_binom,
   exab5 ~ 1,
-  family = bernoulli(), prior = prior_null,
+  family = bernoulli(), prior = pck_null,
   cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
@@ -124,7 +120,7 @@ ck_ab5_rules   <- update(ck_ab5_null, exab5 ~ rules,
                          newdata = extra_binom, prior = prior_effect, 
                          cores = ncore)
 ck_ab5_both    <- update(ck_ab5_null, exab5 ~ blocked + rules, 
-                         newdata = extra_binom, prior = prior_effect, 
+                         newdata = extra_binom, prior = pck_effect, 
                          cores = ncore)
 ck_ab5_inter   <- update(ck_ab5_null, exab5 ~ blocked * rules, 
                          newdata = extra_binom, prior = prior_effect, 
@@ -139,8 +135,8 @@ saveRDS(ck_ab5_inter,   "models/conkurz/ck_exab5_interaction.rds")
 ## "Extrapolator" ab 6 trials
 ck_ab6_null <- brm(
   data = extra_binom,
-  exab6 ~ 1,
-  family = bernoulli(), prior = prior_null,
+  exab6 ~ 1 + (1 | subj_id),
+  family = bernoulli(), prior = pck_null,
   cores = ncore, iter = 12000, warmup = 2000,
   control = list(adapt_delta = 0.9),
   save_pars = save_pars(all = TRUE)
@@ -152,41 +148,44 @@ ck_ab6_blocked <- update(ck_ab6_null, exab6 ~ blocked,
 ck_ab6_rules   <- update(ck_ab6_null, exab6 ~ rules, 
                          newdata = extra_binom, prior = prior_effect, 
                          cores = ncore)
-ck_ab6_both    <- update(ck_ab6_null, exab6 ~ blocked + rules, 
-                         newdata = extra_binom, prior = prior_effect, 
+ck_ab6_both    <- update(ck_ab6_null, exab6 ~ blocked + rules + (1 | subj_id), 
+                         newdata = extra_binom, prior = pck_effect, 
                          cores = ncore)
 ck_ab6_inter   <- update(ck_ab6_null, exab6 ~ blocked * rules, 
                          newdata = extra_binom, prior = prior_effect, 
                          cores = ncore)
 
-saveRDS(ck_ab6_null,    "models/conkurz/ck_exab6_null.rds")
+saveRDS(ck_ab6_null,    "models/conkurz/ck_exab6_null_re.rds")
 saveRDS(ck_ab6_blocked, "models/conkurz/ck_exab6_blocked.rds")
 saveRDS(ck_ab6_rules,   "models/conkurz/ck_exab6_rules.rds")
-saveRDS(ck_ab6_both,    "models/conkurz/ck_exab6_both.rds")
+saveRDS(ck_ab6_both,    "models/conkurz/ck_exab6_both_re.rds")
 saveRDS(ck_ab6_inter,   "models/conkurz/ck_exab6_interaction.rds")
 
 
 #### H2 Models ----
 # I could go ahead and overengineer it with brms,
 # but certainly a simple t-test will do for 2.1 
-BayesFactor::ttestBF(formula = p ~ rules, data = subj_rules)
+h21_ttestBF <- BayesFactor::ttestBF(formula = p ~ rules, data = subj_rules)
 
 ## nonetheless...
-# h21_null <- brm(
-#   p ~ 1,
-#   data = subj_rules, 
-#   family = student, prior = prior_p,
-#   cores = ncore, iter = 12000, warmup = 2000,
-#   save_pars = save_pars(all = TRUE)
-# )
-# 
-# h21_rules <- brm(
-#   p ~ rules,
-#   data = subj_rules, 
-#   family = student, prior = prior_effect,
-#   cores = ncore, iter = 12000, warmup = 2000,
-#   save_pars = save_pars(all = TRUE)
-# )
+h21_null <- brm(
+  k|trials(n) ~ 1,
+  data = subj_rules,
+  family = binomial(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  save_pars = save_pars(all = TRUE)
+)
+
+h21_rules <- brm(
+  k|trials(n) ~ rules,
+  data = subj_rules,
+  family = binomial(), prior = prior_effect,
+  cores = ncore, iter = 12000, warmup = 2000,
+  save_pars = save_pars(all = TRUE)
+)
+
+loo(h21_null, h21_rules)
+bayes_factor(h21_rules, h21_null)
 
 
 ## 2.2 Interaction of Rule & Training Block

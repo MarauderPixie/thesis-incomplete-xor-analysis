@@ -60,7 +60,8 @@ data_fixed <- data_raw %>%
   )
 
 
-all_data <- data_fixed %>% 
+# all_data <- data_fixed %>% 
+all_data <- read_csv("data-raw/fixed-data-27-10-2022.csv") %>% 
   mutate(
     phase = case_when(
       !is.na(correct1) ~ "training",
@@ -96,17 +97,27 @@ all_data <- data_fixed %>%
     blocked  = ifelse(condition == 2 | condition == 4, "yes", "no"),
     # rules    = as_factor(rules),
     # blocked  = as_factor(blocked),
+    # massively convoluted, but ain't nobody got time for aesthetics at this point:
     condition = case_when(condition == 1 ~ "control",
                           condition == 2 ~ "blocked",
                           condition == 3 ~ "rules",
                           condition == 4 ~ "both") %>% 
       as_factor() %>% fct_relevel("control", "rules", "blocked"),
-    duration  = experiment_duration / 1000
+    duration  = experiment_duration / 1000,
+    Group = case_when(
+      condition == "control" ~ 1, 
+      condition == "blocked" ~ 3,
+      condition == "rules" ~ 2,
+      condition == "both" ~ 4
+    ) %>% factor(labels = c("No Treatment", 
+                            "Instructions", 
+                            "Blocked", 
+                            "Blocked + Instructions"))
   )
 
 #### demographics ----
 data_post <- all_data %>% 
-  select(started, submitted, subj_id, condition, rules, 
+  select(started, submitted, subj_id, condition, rules, Group,
          blocked, age, duration, languages, strategy) %>% 
   distinct()
 
@@ -117,11 +128,11 @@ dtrain <- all_data %>%
   mutate(
     correct = response_normalized == correct_normalized,
     trial   = seq(1:96),
-    block   = rep(1:12, each = 8)
+    block   = rep(1:12, each = 8),
+    .groups = "drop"
   ) %>% 
-  select(subj_id, condition, rules, blocked, trial, block, image, 
+  select(subj_id, condition, rules, blocked, trial, block, image, Group,
          response_normalized, response_time, correct) %>% 
-  ungroup() %>% 
   rename("response" = response_normalized)
 
 #### transfer data - categories ----
@@ -142,7 +153,7 @@ dtrans <- all_data %>%
       TRUE ~ NA
     )
   ) %>% 
-  select(subj_id, condition, rules, blocked, image, item, img_x, img_y, 
+  select(subj_id, condition, rules, blocked, image, item, img_x, img_y, Group,
          response_normalized, response_time, correct, extrapolation) %>% 
   rename("response" = response_normalized)
 
@@ -157,27 +168,40 @@ dprob <- all_data %>%
   ) %>% 
   select(subj_id, condition, rules, blocked, image, item, img_x, img_y, 
          # probA, probB, 
-         prob, response_time)
+         Group, prob, response_time)
 
 
 #### Apply exclusion criteria ----
 exctest <- dtrain %>% 
   filter(block > 9) %>% 
-  group_by(subj_id, image) %>% 
+  # group_by(subj_id, image) %>% 
+  group_by(subj_id) %>% 
   summarise(
-    n = n(),
-    p = mean(correct)
+    k = sum(correct)
   ) %>% 
-  filter(p < .65)
+  filter(k < 17)
+
+## deemed unfit by manual inspection, a bit clunky, but meh...
+exclusions <- c("207", "246", "350", as.character(exctest$subj_id))
+
+exclud_train <- dtrain %>% 
+  filter(subj_id %in% exclusions)
+exclud_trans <- dtrans %>% 
+  filter(subj_id %in% exclusions)
 
 data_post <- data_post %>%
-  filter(!(subj_id %in% exctest$subj_id))
+  filter(!(subj_id %in% exclusions)) %>% 
+  droplevels()
 dtrain <- dtrain %>% 
-  filter(!(subj_id %in% exctest$subj_id))
+  filter(!(subj_id %in% exclusions)) %>% 
+  droplevels()
 dtrans <- dtrans %>% 
-  filter(!(subj_id %in% exctest$subj_id))
+  filter(!(subj_id %in% exclusions)) %>% 
+  droplevels()
 dprob  <- dprob %>%
-  filter(!(subj_id %in% exctest$subj_id))
+  filter(!(subj_id %in% exclusions)) %>% 
+  droplevels()
+
 
 #### save to disk & cleanup ----
 # to-do: die ganzen type-casts gehen natürlich wieder verloren hier m)
@@ -189,10 +213,14 @@ write_csv(data_raw,   "data-raw/raw-data-27-10-2022.csv")
 write_csv(data_fixed, "data-raw/fixed-data-27-10-2022.csv")
 saveRDS(data_raw,     "data-raw/raw-data-27-10-2022.rds")
 saveRDS(data_fixed,   "data-raw/fixed-data-27-10-2022.rds")
+
+saveRDS(exclud_train, "data-clean/exclusions_training.rds")
+saveRDS(exclud_trans, "data-clean/exclusions_transfer.rds")
 saveRDS(data_post, "data-clean/demographics.rds")
 saveRDS(dtrain,    "data-clean/trials-training.rds")
 saveRDS(dtrans,    "data-clean/trials-transfer.rds")
 saveRDS(dprob,     "data-clean/trials-probability.rds")
+
 
 fs::dir_copy(
   "data-clean/", 
@@ -200,5 +228,8 @@ fs::dir_copy(
   overwrite = TRUE
 )
 
-rm(pass, user, trial_transfer, critical, date1, date2, intvl, data_raw,
-   neutral, all_data, data_post, dtrain, dtrans, dprob, exctest, data_fixed)
+cat("total n:", n_total, "\n")
+cat("after exclusion: ", n_total - length(exclusions), "\n")
+rm(pass, user, trial_transfer, critical, date1, date2, intvl, 
+   data_raw, excluded, neutral, all_data, data_post, dtrain, 
+   dtrans, dprob, exctest, data_fixed, exclusions, n_total)

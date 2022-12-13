@@ -7,116 +7,410 @@ ipsum_meta:
 output: 
   hrbrthemes::ipsum:
     toc: true
+    highlight: kate
 ---
-```{r include=FALSE}
-knitr::opts_chunk$set(fig.retina=2)
-```
 
 ```{r ipsum_setup, message=FALSE, warning=FALSE, cache=FALSE, echo=FALSE}
-library(hrbrthemes)
-library(tidyverse)
-
+knitr::opts_chunk$set(fig.retina=2)
 source("init.R")
+library(hrbrthemes)
+library(bayesplot)
 update_geom_font_defaults(font_rc)
-
-h1_null <- readRDS("models/h1_null_min.rds")
-h2_null <- readRDS("models/h2_null.rds")
 ```
 
-## H1.1: Blocked Rules
+$\mathrm{M_{1.1}}$
 
-**(directed)** Higher number of extrapolations for the stimuli of the untrained/incomplete category in the blocked training condition, compared to the mixed training condition, in the transfer phase
 
-### Model Ouput
-
-```{r 1.1-model}
-h1_blocked <- readRDS("models/h1_blocked_min.rds")
-
-h1_blocked
+```{r ooof}
+demo <- readRDS("data-clean/demographics.rds") %>% 
+    mutate(
+        Group = case_when(
+            condition == "control" ~ 1, 
+            condition == "blocked" ~ 3,
+            condition == "rules" ~ 2,
+            condition == "both" ~ 4
+        ) %>% factor(labels = c("No Treatment", 
+                                "Instructions", 
+                                "Blocked", 
+                                "Blocked + Instructions"))
+    )
+training <- readRDS("data-clean/trials-training.rds") %>% 
+    mutate(
+        Group = case_when(
+            condition == "control" ~ 1, 
+            condition == "blocked" ~ 3,
+            condition == "rules" ~ 2,
+            condition == "both" ~ 4
+        ) %>% factor(labels = c("No Treatment", 
+                                "Instructions", 
+                                "Blocked", 
+                                "Blocked + Instructions"))
+    )
+transfer <- readRDS("data-clean/trials-transfer.rds") %>% 
+    mutate(
+        Group = case_when(
+            condition == "control" ~ 1, 
+            condition == "blocked" ~ 3,
+            condition == "rules" ~ 2,
+            condition == "both" ~ 4
+        ) %>% factor(labels = c("No Treatment", 
+                                "Instructions", 
+                                "Blocked", 
+                                "Blocked + Instructions"))
+    )
+stimprob <- readRDS("data-clean/trials-probability.rds") %>% 
+    mutate(
+        Group = case_when(
+            condition == "control" ~ 1, 
+            condition == "blocked" ~ 3,
+            condition == "rules" ~ 2,
+            condition == "both" ~ 4
+        ) %>% factor(labels = c("No Treatment", 
+                                "Instructions", 
+                                "Blocked", 
+                                "Blocked + Instructions"))
+    )
 ```
 
-### Inference / Bayes Factor
+## The Data
 
-```{r 1.1-bf}
-bayes_factor(h1_blocked, h1_null)
+```{r data_prep}
+extra_binom <- readRDS("data-clean/trials-transfer.rds") %>% 
+  filter(item == "transfer") %>% 
+  group_by(subj_id, condition, rules, blocked) %>% 
+  summarize(
+    k = sum(extrapolation), # is 0/1
+    n = n(),
+    p = k / n,
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    rules   = as_factor(rules), # no=0, yes=1
+    blocked = fct_relevel(as_factor(blocked), "no", "yes"), # no=0, yes=1
+    exab4 = ifelse(k > 3, 1, 0),
+    exab5 = ifelse(k > 4, 1, 0),
+    exab6 = ifelse(k > 5, 1, 0)
+  )
+
+print(extra_binom)
+```
+### Summary
+
+```{r data_summary}
+extra_binom %>% 
+  group_by(rules, blocked) %>% 
+  summarise(
+    mean_p = mean(p),
+    sd_p   = sd(p),
+    mean_k = mean(k),
+    sd_k   = sd(k),
+    mean_ckab6 = mean(exab6),
+    mean_ckab5 = mean(exab5),
+    .groups = "drop"
+  ) %>% 
+  knitr::kable(digits = 3)
+```
+
+## Regression Models
+
+```{r m_brms, eval=FALSE}
+###############
+##
+## Code block not run
+##
+###############
+
+#### Priors
+# mean = -1 -> roughly 30% on logit scale
+# lb = -4.6 -> roughly 1% on logit scale
+prior_null   <- set_prior(
+  "student_t(3, -1, 1)", class = "Intercept", lb = -4.6
+)
+prior_effect <- c(
+  set_prior("student_t(3, -1, 1)", class = "Intercept", lb = -4.6), 
+  set_prior("student_t(3, .5, 1)", class = "b")
+  # mean = 0.5 -> roughly 7% on logit scale; small-ish effect
+)
+
+h1_null <- brm(
+  data = extra_binom,
+  k|trials(n) ~ 1,
+  family = binomial(), prior = prior_null,
+  cores = ncore, iter = 12000, warmup = 2000,
+  control = list(adapt_delta = 0.9),
+  save_pars = save_pars(all = TRUE)
+)
+
+
+h1_blocked <- update(h1_null, k|trials(n) ~ blocked, 
+                     newdata = extra_binom, prior = prior_effect, 
+                     cores = ncore)
+h1_rules   <- update(h1_null, k|trials(n) ~ rules, 
+                     newdata = extra_binom, prior = prior_effect, 
+                     cores = ncore)
+h1_both    <- update(h1_null, k|trials(n) ~ blocked + rules, 
+                     newdata = extra_binom, prior = prior_effect, 
+                     cores = ncore)
+h1_inter   <- update(h1_null, k|trials(n) ~ blocked * rules, 
+                     newdata = extra_binom, prior = prior_effect, 
+                     cores = ncore)
 ```
 
 
-## H1.2: Instructions
+```{r bf_brms, cache=TRUE}
+h1_null    <- readRDS("models/h1_transfer/h10.rds")
+h1_blocked <- readRDS("models/h1_transfer/h11.rds")
+h1_rules   <- readRDS("models/h1_transfer/h12.rds")
+h1_both    <- readRDS("models/h1_transfer/h131.rds")
+h1_inter   <- readRDS("models/h1_transfer/h132.rds")
 
-**(directed)** Higher number of extrapolations for the stimuli of the untrained/incomplete category in the blocked training condition, compared to the mixed training condition, in the transfer phase
-
-### Model Ouput
-
-```{r 1.2-model}
-h1_instructions <- readRDS("models/h1_rules_min.rds")
-
-h1_instructions
-```
-
-### Inference / Bayes Factor
-
-```{r 1.2-bf}
-bayes_factor(h1_instructions, h1_null)
+# run each model against the intercept only one:
+bayestestR::bf_models(h1_null, h1_blocked, h1_rules, h1_both, h1_inter)
 ```
 
 
-## H1.3: Interaction of Blocked Rules and Instructions
+## BFanova
 
-**(undirected, _exploratory_)** Interaction of rule order and the rule instructions on the number of extrapolations within the untrained/incomplete category
-
-### Model Ouput
-
-```{r 1.3-model}
-h1_both <- readRDS("models/h1_both_min.rds")
-
-h1_both
+```{r bf_aov}
+BayesFactor::anovaBF(p ~ blocked * rules, extra_binom, iterations = 40000, multicore = TRUE)
 ```
 
-### Inference / Bayes Factor
+## Badness of Fit
 
-```{r 1.3-bf}
-bayes_factor(h1_both, h1_blocked)
-bayes_factor(h1_both, h1_instructions)
-bayes_factor(h1_both, h1_null)
+```{r bplot}
+yrep <- posterior_predict(h1_inter, ndraws = 500)
+
+ppc_hist(y = extra_binom$k, binwidth = 1,
+         yrep = yrep[sample(1:183, 5), ]) 
+
+# ppc_ecdf_overlay(y = extra_binom$k, yrep = yrep[sample(1:183, 50), ],
+#                  discrete = TRUE) + ggtitle("ecdf overlay")
+
+ppc_stat(extra_binom$k, yrep, stat = max, binwidth = 1) + ggtitle("yrep maximum")
+
+ppc_bars_grouped(y = extra_binom$k, yrep = yrep[sample(1:183, 5), ], 
+                 group = extra_binom$blocked) + ggtitle("yrep median + 90% uncertainty intervals")
 ```
 
 
 
-## H2.1: Rule Instructions
 
-**(directed)** quicker learning of categories with rule instructions than without in the mixed rule condition
+### blaaa
 
-### Model Ouput
-
-```{r 2.1-model}
-h2_rules <- readRDS("models/h2_rules.rds")
-
-h2_rules
+```{r}
+excluded %>% 
+  filter(block > 9) %>% 
+  group_by(subj_id, img_x, img_y) %>% 
+  summarise(
+    p_correct = round(mean(correct) * 100, 1),
+    img_x = ifelse(img_x > 2, img_x - 2, img_x),
+    img_y = ifelse(img_y > 2, img_y - 2, img_y),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(img_x, img_y, fill = p_correct)) +
+    facet_wrap(~subj_id, nrow = 3) +
+    geom_tile(size = .5) +
+    scale_fill_viridis_c(
+      labels = c(0, "", .5, "", 1),
+      guide = guide_colorbar(
+        direction = "horizontal",
+        title.position = "top",
+        label.position = "bottom"
+      )
+    ) +
+    labs(fill = "Accuracy") +
+    theme_subjects +
+    theme(panel.border = element_rect(color = "#4d4d4d", fill = NA),
+          legend.text  = element_text(size = 6),
+          legend.position = c(.9, .085)
+          )
 ```
 
-### Inference / Bayes Factor
 
-```{r 2.1-bf}
-bayes_factor(h2_rules, h2_null)
+#### blaaahaaaa
+
+```{r kbl1}
+beobachtet <- extra_binom %>% 
+  group_by(rules, blocked) %>% 
+  summarise(
+    n = n(),
+    mean_p = mean(p),
+    sd_p   = sd(p),
+    mean_k = mean(k),
+    sd_k   = sd(k),
+    mean_ckab6 = mean(exab6),
+    mean_ckab5 = mean(exab5),
+    .groups = "drop"
+  )
+
+beobachtet %>% 
+    transmute(
+        Group = case_when(
+            rules == "no" & blocked == "no" ~ "No Treatment",
+            rules == "no" & blocked == "yes" ~ "Blocked Rules",
+            rules == "yes" & blocked == "no" ~ "Rule Instructions",
+            rules == "yes" & blocked == "yes" ~ "Blocked + Instructions",
+        ),
+        "n" = n,
+        "Extrapolators"   = paste0(round(mean_ckab6 * 100), "%"),
+        "Mean" = paste0(round(mean_p * 100, 2), "%"),
+        "SD"   = round(sd_p * 100, 2)
+    ) %>% 
+  # xtable(booktabs = TRUE, caption = "(ref:h1-tbl-summary)") %>%
+  # xtable2kable() %>%
+  kbl(booktabs = TRUE, caption = "(ref:h1-tbl-summary)") %>%
+  kable_styling(full_width = FALSE, font_size = 10, 
+                position = "center") %>% # "float_right") %>% 
+  add_header_above(c(" " = 3, "XOR Extrapolations" = 2))
+  # column_spec(2, border_right = TRUE) %>%
+  # column_spec(4, border_right = TRUE)
+```
+
+```{r kbl2}
+h1_both %>% 
+  as_draws_df() %>% 
+  summary()
 ```
 
 
-## H2.2: Interaction of Training Block and Rule Instructions
+## sth sth plots
 
-**(undirected, _exploratory_)** Interaction of learning accuracy between training blocks (3-12) and rule instructions in the blocked rule condition
+```{r plt}
+grng <- extra_binom %>% select(subj_id, exab6)
 
-### Model Ouput
+transp <- stimprob %>% 
+  left_join(grng, by = "subj_id") %>% 
+  mutate(
+    extrap = ifelse(exab6 == 1, "extra", "proxy")
+  )
 
-```{r 2.2-model}
-h2_interaction <- readRDS("models/h2_inter.rds")
-
-h2_interaction
+transp %>% 
+  # left_join(grng, by = "subj_id") %>% 
+  group_by(condition, extrap, img_x, img_y) %>% 
+  summarise(
+    p = mean(prob),
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    cert_unscaled = ifelse(p < 50, 100 - p, p),
+    certainty = scales::rescale(cert_unscaled, c(0, 100))
+  ) %>% 
+  ggplot(aes(img_x, img_y, fill = certainty)) +
+    facet_grid(condition ~ extrap) +
+    # facet_wrap(~condition, nrow = 1) ~
+    geom_tile(size = .5, color = "white") +
+    scale_fill_viridis_c() +
+    theme_transfer +
+    theme(legend.position = "none",
+          strip.text = element_text(size = 8),
+          panel.spacing = unit(5, "pt"))
 ```
 
-### Inference / Bayes Factor
+```{r moar}
+transp %>%
+  mutate(
+    image = str_extract(image, "e[0-9][0-9]"),
+    cert_unscaled = ifelse(p < 50, 100 - p, p),
+    certainty     = scales::rescale(cert_unscaled, c(0, 100))
+  ) %>% 
+  ggplot(aes(x = prob)) +
+    facet_grid(cols = vars(img_x), 
+               rows = vars(7 - img_y)) +
+    geom_histogram(binwidth = 10) +
+    # geom_text(aes(label = image, x = 25, y = 100), size = 3) +
+    theme(strip.text  = element_blank(),
+          axis.text.x = element_blank(),
+          axis.title.x  = element_blank(),
+          axis.title.y  = element_blank(),
+          panel.grid.minor = element_blank(),
+          panel.grid.major.x = element_blank(),
+          panel.spacing = unit(2, "pt"))
+```
 
-```{r 2.2-bf}
-bayes_factor(h2_interaction, h2_rules)
-bayes_factor(h2_interaction, h2_null)
+
+```{r ch2-plot-exclusions, fig.cap="(ref:ch2-plot-exclusions)", fig.height=3.6}
+plex_train <- exclud_train %>% 
+  left_join(distinct(select(exclud_trans, image, img_x, img_y)), by = "image") %>% 
+  filter(block > 9) %>% 
+  group_by(subj_id, img_x, img_y) %>% 
+  summarise(
+    p_correct = round(mean(correct) * 100, 1),
+    img_x = ifelse(img_x > 2, img_x - 2, img_x),
+    img_y = ifelse(img_y > 2, img_y - 2, img_y),
+    .groups = "drop"
+  ) %>%
+  ggplot(aes(img_x, img_y, fill = p_correct)) +
+    facet_wrap(~subj_id, nrow = 1) +
+    geom_tile(size = .5) +
+    scale_fill_viridis_c(
+      guide = guide_colorbar(
+        barwidth = 1,
+        barheight = 4
+      )
+    ) +
+    labs(fill = "Acc.") +
+    theme_subjects +
+    theme(panel.border = element_rect(color = "#3c3c3c", fill = NA),
+          legend.text  = element_text(size = 6),
+          legend.position = "right",
+          legend.justification = c(.9, .1)
+    )
+
+plex_trans <- ggplot(exclud_trans, aes(img_x, img_y, fill = response)) +
+  facet_wrap(~subj_id, nrow = 1) +
+  geom_tile(size = .5, color = "white") +
+  scale_fill_manual(values = c("#ac0634", "#525252")) +
+  theme_subjects +
+  theme(panel.border = element_rect(color = "#525252", fill = NA),
+        legend.text  = element_text(size = 6),
+        legend.position = "none"
+  )
+
+plex_train / plex_trans
+```
+
+
+```{r h1-plots-hist, fig.cap="Number of extrapolated stimuli per person and condition"}
+exp_hist <- transfer %>% 
+  filter(item == "transfer") %>% 
+  group_by(subj_id, Group) %>% 
+  summarise(ext = sum(extrapolation)) %>%
+  ggplot(aes(ext)) +
+    facet_wrap(~Group, nrow = 1, 
+               labeller = label_wrap_gen(width=10)) +
+    geom_histogram(binwidth = 1) +
+    scale_x_continuous(breaks = scales::pretty_breaks(n = 10), 
+                       labels = c("", 0:9, "")) +
+    labs(x = "Extrapolations", y = "n") +
+    theme(panel.grid.minor.x = element_blank(),
+          panel.grid.major.x = element_blank())
+
+exp_grad <- transfer %>% 
+  left_join(proxy_ex_ids, by = c("subj_id", "Group")) %>% 
+  count(Group, img_x, img_y, extrap, response) %>% 
+  spread(response, n) %>% 
+  mutate(
+    Nobz = ifelse(is.na(Nobz), 0, Nobz),
+    Grot = ifelse(is.na(Grot), 0, Grot),
+    n = Nobz + Grot,
+    p_Grot = (Grot / n * 100) |> round(2)
+  ) %>% 
+  ggplot(aes(img_x, img_y, fill = p_Grot)) +
+    facet_grid(extrap~Group, switch = "y",
+               labeller = label_wrap_gen(width=10)) +
+    geom_tile(size = .1, color = "white") +
+    scale_fill_viridis_c() +
+    theme_transfer +
+    theme(legend.position = "none",
+          strip.text.x = element_blank())
+
+exp_hist / exp_grad
+```
+
+
+```{r}
+read_delim("~/Dokumente/Thesis/writing/models/bf-rc.csv", 
+           delim = ";", escape_double = FALSE, trim_ws = TRUE) %>% 
+  kbl(escape = TRUE, booktabs = T, align = "c") %>% 
+  kable_styling()
 ```

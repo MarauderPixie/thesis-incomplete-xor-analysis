@@ -6,6 +6,56 @@ demo <- readRDS("data-clean/demographics.rds")
 training <- readRDS("data-clean/trials-training.rds")
 transfer <- readRDS("data-clean/trials-transfer.rds")
 stimprob <- readRDS("data-clean/trials-probability.rds")
+exclud_train <- readRDS("data-clean/exclusions_training.rds")
+exclud_trans <- readRDS("data-clean/exclusions_transfer.rds")
+
+
+extra_binom <- transfer %>% 
+  filter(item == "transfer") %>% 
+  group_by(subj_id, Group, rules, blocked) %>% 
+  summarize(
+    k = sum(extrapolation),
+    n = n(),
+    p = k / n,
+    .groups = "drop"
+  ) %>% 
+  mutate(
+    exab4 = ifelse(k > 3, 1, 0),
+    exab5 = ifelse(k > 4, 1, 0),
+    exab6 = ifelse(k > 5, 1, 0),
+    extrap = ifelse(k > 5, "Extrapolators", "Proximators")
+    # Group = case_when(exp_grad <- transfer %>% 
+    #                     left_join(proxy_ex_ids, by = c("subj_id", "Group")) %>% 
+    #                     count(Group, img_x, img_y, extrap, response) %>% 
+    #                     spread(response, n) %>% 
+    #                     mutate(
+    #                       Nobz = ifelse(is.na(Nobz), 0, Nobz),
+    #                       Grot = ifelse(is.na(Grot), 0, Grot),
+    #                       n = Nobz + Grot,
+    #                       p_Grot = (Grot / n * 100) |> round(2),
+    #                       extrap = ifelse(Grot > 5, "Extrapolators", "Proximators")
+    #                     )
+  )
+
+proxy_ex_ids <- extra_binom %>%
+  select(subj_id, Group, extrap)
+
+beobachtet <- extra_binom %>% 
+  group_by(rules, blocked) %>% 
+  summarise(
+    mean_p = mean(p),
+    sd_p   = sd(p),
+    mean_k = mean(k),
+    sd_k   = sd(k),
+    mean_ckab6 = mean(exab6),
+    mean_ckab5 = mean(exab5),
+    .groups = "drop"
+  )
+
+
+trans_ex <- extra_binom %>% 
+  select(subj_id, condition, extrap) %>%
+  right_join(transfer, by = c("subj_id", "condition"))
 
 dur <- quantile(demo$duration, c(.025, .95)) |> as.numeric()
 
@@ -67,7 +117,7 @@ training %>%
   ) %>% 
   mutate(
     block = as_factor(block),
-    tick = rep(1:6, each = 2) |> as_factor()
+    tick  = rep(1:6, each = 2) |> as_factor()
   ) %>% 
   ungroup() %>% 
   group_by(subj_id, rules, blocked, tick) %>% 
@@ -269,26 +319,30 @@ exin <- transfer %>%
   ) %>%
   group_by(subj_id) %>% 
   mutate(
-    extraprox = ifelse(sum(extrapolation, na.rm = T) > 4, 
+    extraprox = ifelse(sum(extrapolation, na.rm = T) > 6, 
                        "extra", "proxy")
   ) %>% 
   ungroup()
 
 stimprob %>%
-  select(-img_x, -img_y) %>% 
-  left_join(exin, by = c("subj_id", "image")) %>% 
-  group_by(img_x, img_y, extraprox) %>% 
+  # select(-img_x, -img_y) %>% 
+  left_join(exin, by = c("subj_id", "image",
+                         "img_x", "img_y", "condition")) %>% 
+  group_by(img_x, img_y, condition, extraprox) %>% 
   summarise(
     p = mean(prob)
   ) %>% 
   ungroup() %>% 
-  ggplot(aes(img_x, img_y, fill = p)) +
-    facet_grid(~ extraprox) +
+  mutate(
+    cert_unscaled = ifelse(p < 50, 100 - p, p),
+    certainty = scales::rescale(cert_unscaled, c(0, 100))
+  ) %>% 
+  ggplot(aes(img_x, img_y, fill = certainty)) +
+    facet_grid(condition ~ extraprox) +
+    # facet_wrap(~condition, nrow = 1) ~
     geom_tile(color = "#F0F0F0", size = .5) +
-    geom_label(
-      # data = cat_labs, aes(label = categ, fill = NULL), 
-      aes(label = round(p, 2)),
-      color = "black", fill = "#F0F0F0") +
+    # geom_label(aes(label = round(p, 2)),
+    #            color = "black", fill = "#F0F0F0") +
     labs(
       subtitle = "Wahrscheinlichkeitsschätzung der Kategorienzugehörigkeit",
       fill = "Grot") +
